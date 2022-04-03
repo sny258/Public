@@ -1,0 +1,31 @@
+** from subscriptions tab we can open particular subscription and see the values there
+	get subscription ID
+	Tenant ID is also present there.
+
+** for Registered app in Azure AD, we can open it and see the values there
+	Application ID is Cliend ID
+	Directory ID is Tenant ID
+	Under Certifications & Secrets we can find Client Secrets.
+
+** To login into Azure we need all 4 mentioned above
+
+** https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret
+
+
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "2.74.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+
+  subscription_id = "00000000-0000-0000-0000-000000000000"
+  client_id       = "00000000-0000-0000-0000-000000000000"
+  client_secret   = var.client_secret
+  tenant_id       = "00000000-0000-0000-0000-000000000000"
+}

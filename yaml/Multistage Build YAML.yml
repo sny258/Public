@@ -1,0 +1,96 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  name: Default
+
+variables:
+  company_name: My Company
+  user_name: admin
+  password: P@ssword1
+
+stages:
+- stage: build_vm1
+  displayName: build_vm1
+  jobs:
+  - job: Build1
+    pool:
+      name: Default 
+    steps:
+    - task: CmdLine@2
+      displayName: CMD echo1
+      inputs:
+        script: |
+          echo Job1
+          echo Build1
+    - task: CmdLine@2
+      displayName: CMD echo2
+      inputs:
+        script: |
+          echo Job1
+          echo Build1
+  - job: Build2
+    pool:
+      name: Default 
+    steps:
+    - task: CmdLine@2
+      displayName: CMD echo2
+      inputs:
+        script: |
+          echo Job2
+          echo Build2
+- stage: build_vm2
+  displayName: build_vm2
+  jobs:
+  - job: Build
+    pool:
+      name: Default 
+    steps:
+    - task: CmdLine@2
+      displayName: CMD echo
+      inputs:
+        script: |
+          echo Write your commands here
+          echo Hello world
+
+
+
+
+
+-------- Variable Group both at pipeline and job level ----------------
+
+
+trigger:
+- mainn
+
+pool:
+  name: Default
+
+variables:
+  - group: Test_Var_Group2
+  - name: UserName
+    value: Admin
+
+stages:
+- stage: build_vm1
+  displayName: build_vm1
+  jobs:
+  - job: build_Virginia
+    variables:
+    - group: Test_Var_Group
+    - name: job_name
+      value: 'Build us-east-1'
+    steps:
+      - script: |
+          echo $(job_name)
+          echo $(NameA)
+          echo $(NameB)
+          echo $(UserName)
+          echo $(NameC)
+          
+    

@@ -1,0 +1,27 @@
+trigger:
+    branches:
+      include:
+        - master
+    paths:
+      include:
+        - variables.tf
+        - main.tf
+  
+pool:
+    vmImage: "ubuntu-latest"
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
+      displayName: 'Install Terraform'
+    - script: terraform version
+      displayName: Terraform Version
+    - script:  az login --tenant $(tenant_id)
+      displayName: 'Log Into Azure'
+    - script: terraform init
+      displayName: "Terraform Init"
+      workingDirectory: $(System.DefaultWorkingDirectory)
+    - script: terraform plan
+      displayName: Terraform Plan
+      workingDirectory: $(System.DefaultWorkingDirectory)
+    - script: terraform apply out.plan
+      displayName: 'Terraform Apply'
+      workingDirectory: $(System.DefaultWorkingDirectory)

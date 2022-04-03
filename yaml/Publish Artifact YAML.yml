@@ -1,0 +1,47 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- Main
+
+pool:
+  name: Default
+
+variables:
+  company_name: My Company
+  user_name: admin
+  password: P@ssword1
+
+stages:
+- stage: Build
+  displayName: Build
+  jobs:
+  - job: Job1
+    pool:
+      name: Default 
+    steps:
+    - task: CmdLine@2
+      displayName: CMD
+      inputs:
+        script: |
+          echo bat output
+          echo '---------------------'
+          echo $(password)
+          echo '---------------------'
+          abc.bat 
+        workingDirectory: Folder1
+    - task: CopyFiles@2
+      displayName: Copy Files
+      inputs:
+        SourceFolder: 'Folder1'
+        Contents: '**'
+        TargetFolder: '$(build.artifactstagingdirectory)'
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Artifact drop
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
