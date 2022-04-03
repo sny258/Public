@@ -61,10 +61,19 @@ git checkout <branch>		-- to get Remote branch in local repo which was not prese
 ** 'git -c http.sslVerify=false' to temporarily avoid SSL certification error  (git config --global http.sslVerify false, not secure)
 
 
-----------------------
 
-Merging Branches to Remote Repository
+------ Merging Branches to Remote Repository ---------
 
 If you create a branch in your local repository, the remote repository is not aware of the branch’s existence. Before you can push the branch code in the remote repository, you set the remote repository as the upstream branch using the git pushcommand. This command simultaneously sets the upstream branch and pushes the branch contents to the remote repository.
 
 git push --set-upstream origin <branch name>
+
+
+
+------- Demo 1 -------------
+
+** first clone the github repo
+** git config --global user.name <username>
+** create a new branch and copy all the files
+** now add the files and commit the changes
+** git push --set-upstream origin dev
