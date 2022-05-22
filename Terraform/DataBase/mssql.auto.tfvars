@@ -1,0 +1,7 @@
+sql_name="sqlpaastest78"
+location="West Europe"
+subscription_name="glbl-dv-sql-paastest-sub"
+tags="dev"
+resource_group_name= "glbl-dv-sql-paastest-rgp"
+vnet_name="vnet1"
+subnet_name="subnet1"

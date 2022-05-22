@@ -1,0 +1,146 @@
+-------- Environmental Variable -------------
+
+** With help of Env variables, we can directly authenticate azure and backend without passing values in main.tf file and without adding them in variables.tf file.
+
+
+$ export ARM_CLIENT_ID			 = "00000000-0000-0000-0000-000000000000"
+$ export ARM_CLIENT_CERTIFICATE_PATH	 = "/path/to/my/client/certificate.pfx"
+$ export ARM_CLIENT_CERTIFICATE_PASSWORD = "Pa55w0rd123"
+$ export ARM_SUBSCRIPTION_ID		 = "00000000-0000-0000-0000-000000000000"
+$ export ARM_TENANT_ID			 = "00000000-0000-0000-0000-000000000000"
+
+
+$ export ARM_CLIENT_ID		= "00000000-0000-0000-0000-000000000000"
+$ export ARM_CLIENT_SECRET	= "00000000-0000-0000-0000-000000000000"
+$ export ARM_SUBSCRIPTION_ID	= "00000000-0000-0000-0000-000000000000"
+$ export ARM_TENANT_ID		= "00000000-0000-0000-0000-000000000000"
+
+
+$ export AZDO_PERSONAL_ACCESS_TOKEN = <Personal Access Token>
+$ export AZDO_ORG_SERVICE_URL	    = https://dev.azure.com/<Your Org Name>
+
+
+$ export ARM_SAS_TOKEN  = <Storage Account SAS Token>
+$ export ARM_ACCESS_KEY = <Blob Container Access Key>
+
+
+---- Example main.tf ----
+
+terraform {
+  required_providers {
+    azuredevops = {
+      source  = "microsoft/azuredevops"
+      version = ">=0.1.0"
+    }
+  }
+}
+
+provider "azuredevops" {
+#  org_service_url       = var.Azure_DevOps_Org_Url
+#  personal_access_token = var.Personal_Access_token
+}
+
+
+
+locals {
+  mod_local = var.local_name
+}
+
+resource "azuredevops_project" "project" {
+  name               = "${local.mod_local}"
+  visibility         = "private"
+  version_control    = "Git"
+  work_item_template = "Basic"
+}
+
+resource "azuredevops_git_repository" "repo" {
+  project_id = azuredevops_project.project.id
+  name       = "Terraform Git"
+  initialization {
+    init_type = "Clean"
+  }
+}
+
+
+
+----- Example variables.tf -----
+
+#variable "Azure_DevOps_Org_Url" {
+#  default     = "https://dev.azure.com/xxxx/"
+#  description = "Azure DevOps Organization URL"
+#}
+
+#variable "Personal_Access_token" {
+# default     = "xxxx-xxxx-xxxx-xxxx"
+# description = "Token for Verification"
+#}
+
+variable "local_name" {
+  default     = "localGit"
+  description = "nothing"
+}
+
+
+------- Example pipeline.yml -----
+
+trigger: none
+
+variables:
+  - group: Terraform
+
+stages:
+
+ - stage: Build
+   displayName: Build
+   jobs:
+    - job: Terraform_Build
+      pool:
+        name: Default
+      steps:
+      - task: PowerShell@2
+        displayName: 'Terraform INIT'
+        inputs:
+          targetType: 'inline'
+          script: 'terraform init'
+          failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/terraform_AzDO'
+      - task: PowerShell@2
+        displayName: 'Terraform VALIDATE'
+        inputs:
+          targetType: 'inline'
+          script: 'terraform validate'
+          failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/terraform_AzDO'
+      - task: PowerShell@2
+        displayName: 'Terraform PLAN'
+        env:
+          AZDO_ORG_SERVICE_URL: $(Azure_DevOps_Org_Url)
+          AZDO_PERSONAL_ACCESS_TOKEN: $(Personal_Access_token)
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform plan
+          failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/terraform_AzDO'
+
+ - stage: Deploy
+   displayName: Deploy
+   jobs:
+    - job: Terraform_Deploy
+      pool:
+        name: Default
+      steps:
+      - checkout: none
+      - task: PowerShell@2
+        displayName: 'Terraform APPLY'
+        env:
+          AZDO_ORG_SERVICE_URL: $(Azure_DevOps_Org_Url)
+          AZDO_PERSONAL_ACCESS_TOKEN: $(Personal_Access_token)
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform apply -auto-approve
+          failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/terraform_AzDO'
+
+

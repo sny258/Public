@@ -1,0 +1,87 @@
+Script to connect with Azure Key Vault: 
+$clientID = 'af3ceac0-0fc8-438d-xxxx-xxxxxxxxx'
+$key = 'MUAlX0QrSCpBcVVYWklSa18wVmMjxxxxxxxxxxxxxxxxxx=='
+$tenantID = '36da45f1-dd2c-4d1f-xxxx-xxxxxxxxxxx'
+$SecurePassword = $key | ConvertTo-SecureString -AsPlainText -Force
+$cred = new-object -typename System.Management.Automation.PSCredential `
+     -argumentlist $clientID, $SecurePassword
+Connect-AzAccount -Credential $cred -TenantId $tenantID  -ServicePrincipal
+
+Script to fetch secret information and values: 
+Get-AzKeyVaultSecret -VaultName dfte-dev -Name 'ATest'
+$secretText = Get-AzKeyVaultSecret -VaultName dfte-dev -Name 'ATest' -AsPlainText
+Write-Host $secretText
+
+Script to create or update secrets:
+$avalue = ConvertTo-SecureString "ExamplePassword" -AsPlainText -Force
+$secret = Set-AzKeyVaultSecret -VaultName dfte-dev -Name "ANewSecret" -SecretValue $avalue
+
+Demo to get required details:- https://www.youtube.com/watch?v=WygwzN9FfMQ&t=159s
+
+
+------------ Connect to Azure via Powershell ---------------
+
+Get-AzSubscription
+
+Name                               Id                      TenantId                        State
+----                               --                      --------                        -----
+Subscription1                      yyyy-yyyy-yyyy-yyyy     aaaa-aaaa-aaaa-aaaa             Enabled
+Subscription2                      xxxx-xxxx-xxxx-xxxx     aaaa-aaaa-aaaa-aaaa             Enabled
+Subscription3                      zzzz-zzzz-zzzz-zzzz     bbbb-bbbb-bbbb-bbbb             Enabled
+
+** A tenant is AD which gets created when we sign up for MS azure.
+** A Tenant can have multiple subscription.
+
+Get-AzSubscription -TenantId "aaaa-aaaa-aaaa-aaaa"
+
+Name                               Id                      TenantId                        State
+----                               --                      --------                        -----
+Subscription1                      yyyy-yyyy-yyyy-yyyy     aaaa-aaaa-aaaa-aaaa             Enabled
+Subscription2                      xxxx-xxxx-xxxx-xxxx     aaaa-aaaa-aaaa-aaaa             Enabled
+
+
+Connect-AzAccount -Tenant 'xxxx-xxxx-xxxx-xxxx' -SubscriptionId 'yyyy-yyyy-yyyy-yyyy'
+
+Account                SubscriptionName TenantId                Environment
+-------                ---------------- --------                -----------
+azureuser@contoso.com  Subscription1    xxxx-xxxx-xxxx-xxxx     AzureCloud
+
+
+-------------------
+
+
+$clientID = 'af3ceac0-0fc8-438d-xxxx-xxxxxxxxx'
+$key = 'MUAlX0QrSCpBcVVYWklSa18wVmMjxxxxxxxxxxxxxxxxxx=='
+$tenantID = '36da45f1-dd2c-4d1f-xxxx-xxxxxxxxxxx
+$SecurePassword = $key | ConvertTo-SecureString -AsPlainText -Force
+$cred = new-object -typename System.Management.Automation.PSCredential `
+     -argumentlist $clientID, $SecurePassword
+Connect-AzAccount -Credential $cred -TenantId $tenantID  -ServicePrincipal 
+
+
+$projId = Get-Content ProjectID.txt
+$fileName = $projId + '_DB_Assets.csv'
+$fileExist = Test-Path $fileName
+Write-Output $fileExist
+if ($fileExist) {
+              Remove-Item $fileName
+              Write-Output Inisde if
+}
+New-Item $fileName -ItemType File
+$files = Get-Content -Path DFTE_Apps.txt
+$output = foreach  ($file in $files) {
+              
+              $secretClientId = $projId+'-DBORDS-'+$file+'-CLIENT-ID'
+              $clientId = Get-AzKeyVaultSecret -VaultName dfte-dev -Name $secretClientId -AsPlainText
+              Write-Host $clientId
+              $secretClientValue = $projId+'-DBORDS-'+$file+'-CLIENT-SECRET'
+              $clientValue = Get-AzKeyVaultSecret -VaultName dfte-dev -Name $secretClientValue -AsPlainText
+              Write-Host $clientValue
+              
+                             if ($file -contains 'DGEN'){
+                             'DFTE_DGEN_ORDSLoginDetails,DFTE_DGEN_ORDSLoginDetails,Credential,'+$clientId+','+$clientValue
+                             }else{
+                             $projId+'_'+$file+'_DBORDS_Credentials,ORDSLoginDetails,Credential,'+$clientId+','+$clientValue
+                             }
+}  
+Set-Content $fileName $output
