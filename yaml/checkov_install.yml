@@ -1,0 +1,54 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+#trigger:
+#  branches:
+#    include:
+#    - main
+#  paths:
+#    include:
+#    - Checkov
+
+pool:
+  vmImage: Windows-latest
+
+stages:
+- stage: QualityCheck
+  displayName: QualityCheck
+  jobs:
+    - job: CheckovJob
+      displayName: Run Checkov
+      steps:
+      
+      - task: Bash@3
+        inputs:
+          targetType: 'inline'
+          script: 'pip install checkov'
+        displayName: Install Checkov
+
+      # task to check the checkov results only, it will fail untill all checks passed  
+      # - script: |
+      #     checkov --directory $(System.DefaultWorkingDirectory)/checkov
+      #   displayName: 'Checkov Static Code Analysis'
+      
+      - script: |
+          checkov --directory $(System.DefaultWorkingDirectory)/checkov --output junitxml > $(System.DefaultWorkingDirectory)/checkov-report.xml
+        displayName: 'Checkov Static Code Analysis'
+        #continueOnError: true
+        
+      - task: PublishTestResults@2
+        displayName: 'Publish Checkov Test Reuslts'
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: '**/*checkov-report.xml'
+          searchfolder: '$(System.DefaultWorkingDirectory)'
+          mergeTestResults: false
+          testRunTitle: 'Checkov Scan Results'
+          failTaskOnFailedTests: false
+          publishRunAttachments: true
