@@ -17,10 +17,10 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = "xxxx-xxxx-xxxx-xxxx"                         #var.subscription_id
-  tenant_id       = "xxxx-xxxx-xxxx-xxxx"                         #var.tenant_id
-  client_id       = "xxxx-xxxx-xxxx-xxxx"                         #var.client_id
+  #subscription_id = "xxxx-xxxx-xxxx-xxxx"                         #var.subscription_id
+  #tenant_id       = "xxxx-xxxx-xxxx-xxxx"                         #var.tenant_id
+  #client_id       = "xxxx-xxxx-xxxx-xxxx"                         #var.client_id
   #client_certificate_path       = "C:\\Cert\\spncert.pfx"				#var.client_certificate_path
   #client_certificate_password   = "xxxxxxxxxxx"					    #var.cert_password
-  client_secret   = "xxxx-xxxx-xxxx-xxxx"                         #var.client_secret
+  #client_secret   = "xxxx-xxxx-xxxx-xxxx"                         #var.client_secret
 }
