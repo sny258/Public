@@ -1,0 +1,91 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+
+trigger:
+  branches:
+    include:
+    - feat/publishnugetpkg                  # folder structure: Repo --> Packages(folder)/sanju.psm1(folder)/sanju.psm1(file)+sanju.psd1(file)
+  paths:
+    include:
+    - packages/*.psd1                       # will trigger pipeline only when changes are in psd1 file
+
+pool:
+  name: DEVNestleEUR
+
+stages:
+-  stage: stage1
+   displayName: stage1
+   jobs:
+   - job: Nuget
+     pool:
+       name: DEVNestleEUR
+     steps: 
+     - task: NuGetToolInstaller@1
+       displayName: 'Use NuGet '
+
+#     - task: powershell@2
+#       displayName: 'Create psd1'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           New-ModuleManifest -Path .\${{parameters.packagename}}.psd1
+#         workingDirectory: '$(Build.SourcesDirectory)/packages/${{parameters.packagename}}'
+
+# psd1 file be commited along with psm1 file from developer to manager the version accordingly
+
+     - task: powershell@2
+       displayName: 'PowerShell Script'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $files = git show --pretty="" --name-only | where-object {$_ -like '*/*.ps?1'}       # will give the path of directory which has latest changes commited to it
+           write-host $files
+           $files1=$files.split("/")[1]                                                         # will store the folder name (folder and psm1 package name is same)
+           write-host $files1
+           write-host "##vso[task.setvariable variable=packagename]$files1"                     # will store path in variable to use in other tasks
+         workingDirectory: '$(Build.SourcesDirectory)'
+
+     - task: powershell@2
+       displayName: 'Nuget Spec'
+       inputs:
+         targetType: 'inline'
+         script: |
+           nuget spec $(packagename) 
+         workingDirectory: '$(Build.SourcesDirectory)/packages/$(packagename)'
+
+     - task: powershell@2
+       displayName: 'updating latest version'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $manifest = Import-PowerShellDataFile "$(packagename).psd1"
+           $version1 = echo $manifest.ModuleVersion                                 # will store the version number 
+           echo $version1
+           $filePathToTask = "$(packagename).nuspec"
+           $xml = New-Object XML                                                    # new object to store data of nuspec file
+           $xml.Load($filePathToTask)
+           $element = $xml.SelectSingleNode("//version")                            
+           $element.InnerText = $version1                                           # will replace version of nuspec file with psd1's
+           $element1 = $xml.SelectSingleNode("//dependencies")
+           $element1.InnerText = ""                                                 # will remove the dependencies block from nuspec
+           $xml.Save($filePathToTask)                                               # will save the changes to nuspec
+         workingDirectory: '$(Build.SourcesDirectory)/packages/$(packagename)'
+  
+     - task: powershell@2
+       displayName: 'Nuget Pack'
+       inputs:
+         targetType: 'inline'
+         script: |
+           nuget pack $(packagename).nuspec 
+         workingDirectory: '$(Build.SourcesDirectory)/packages/$(packagename)'
+
+     - task: NuGetCommand@2
+       displayName: 'NuGet push'
+       inputs:
+         command: push
+         packagesToPush: 'packages/$(packagename)/**/*.nupkg'
+         publishVstsFeed: 'ee5c80ee-217a-4df0-aaa2-d0977445e3ea/fb8af36f-8f91-45f7-bed2-0c4c299bf8b3'       #feed_id
+         allowPackageConflicts: true
