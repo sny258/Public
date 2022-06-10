@@ -1,3 +1,5 @@
+$HOOK_ID = 'tf'
+
 terraform init -backend=false
 terraform validate 
 Remove-Item -LiteralPath ".terraform" -Force -Recurse
