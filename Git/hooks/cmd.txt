@@ -1,0 +1,9 @@
+
+to add custom hooks to particular repo:
+command- git config core.hooksPath “c:\hooks”
+path- repo/.git/config 
+
+ 
+to add custom hooks globally:
+command- git config --global core.hooksPath “c:\hooks”  
+path- C:\Users\<user>\.gitconfig
