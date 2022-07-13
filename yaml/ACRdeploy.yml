@@ -1,0 +1,75 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+pool:
+  #name: Azure Pipelines 
+  vmImage: 'windows-latest'
+
+variables:
+  - group: ACR_w2k                                                          #Docker (variable group with ACR name, username, pass)
+  - name: imageRepository
+    value: AKS/agentimage2022
+  - name: containerRegistry
+    value: glbldvazdoagentpoolacr.azurecr.io/agentimage2022                 #<ACRserver>/<imagename>
+  - name: dockerfilePath
+    value: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/Dockerfile'
+  # - name: tag
+    # value: $(Build.BuildId)
+  
+
+stages:
+- stage: ACR
+  displayName: ACR
+  jobs:
+  - job: ACR_build_push
+    pool:
+      vmImage: 'windows-latest' 
+    steps:
+
+    # - task: Docker@2
+    #   displayName: docker_build_push
+    #   inputs:
+    #     containerRegistry: 'Docker Hub'
+    #     repository: 'AKS/demo-aap'
+    #     command: 'buildAndPush'
+    #     Dockerfile: 'Dockerfile'
+    #     tags: '$(Build.Buildid)'
+      
+    - task: PowerShell@2
+      displayName: Build
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker build -t $(imageRepository):$(Build.BuildId) -f $(dockerfilePath) .
+        workingDirectory: '$(Build.SourcesDirectory)'
+      
+    - task: PowerShell@2
+      displayName: Tag
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker tag $(imageRepository):$(Build.BuildId) $(containerRegistry):$(Build.BuildId)
+        workingDirectory: '$(Build.SourcesDirectory)'
+    
+    - task: PowerShell@2
+      displayName: Log-in
+      inputs:
+        targetType: 'inline'
+        script: |
+          #docker login -u $(username) -p $(password)
+          docker login glbldvazdoagentpoolacr.azurecr.io --username $(ACRusername) --password $(ACRpassword)
+        workingDirectory: '$(Build.SourcesDirectory)'
+
+    - task: PowerShell@2
+      displayName: Push
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker push $(containerRegistry):$(Build.BuildId)
+        workingDirectory: '$(Build.SourcesDirectory)'
+      
