@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+    name: azdo-agent22-cronjob
+spec:
+  schedule: "*/5 * * * *"                           # run job every five minute
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            "agentpool": ws2022
+          containers:
+          - name:  azdo-agent22-cronjob                             
+            image: glbldvazdoagentpoolacr.azurecr.io/agentimage2022cronjob:v1.0
+            command: ["powershell.exe", "-File", "cronjob_start.ps1"]
+            env:
+              - name: AZP_URL
+                valueFrom:
+                  secretKeyRef:               # fetching values from kubernetes secrets
+                    name: azdevops
+                    key: AZP_URL
+              - name: AZP_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: azdevops
+                    key: AZP_TOKEN
+              - name: AZP_POOL
+                valueFrom:
+                  secretKeyRef:
+                    name: azdevops
+                    key: AZP_POOL2022
+              - name: MY_POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+            lifecycle:                                      # need to verify if it's possible
+              preStop:
+                exec:
+                  command: ["powershell.exe", "-File", "deleteAgentByName.ps1"]
+          restartPolicy: OnFailure
+
+
+# kubectl apply -f cronjob.yml -n=azdo
+# kubectl get cronjob -n=azdo
+# kubectl delete cronjob/azdo-agent22-cronjob -n=azdo

@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azdo-deployment-hpa
+  labels:
+    app: azdo-agent22             # all pods will have unique name, but with help of label they can be grouped for specific deployment
+spec:
+  replicas: 2                       # here is the configuration for the actual agent always running
+  selector:
+    matchLabels:                    # to match pods with deployment (line 6)           
+      app: azdo-agent22
+  template:
+    metadata:
+      labels:
+        app: azdo-agent22
+    spec:
+      nodeSelector:
+        #"kubernetes.io/os": windows                    # to deploy to specific node pool using pre-defined labels
+        #"kubernetes.azure.com/agentpool": ws2022
+        "agentpool": ws2022
+        #"OS": win2022                                   # lable
+      containers:
+      - name:  azdo-agent22                             # the name of container in pod
+        image: glbldvazdoagentpoolacr.azurecr.io/agentimage2022azcli:v3.3
+        env:
+          - name: AZP_URL
+            valueFrom:
+              secretKeyRef:               # fetching values from kubernetes secrets
+                name: azdevops
+                key: AZP_URL
+          - name: AZP_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: azdevops
+                key: AZP_TOKEN
+          - name: AZP_POOL
+            valueFrom:
+              secretKeyRef:
+                name: azdevops
+                key: AZP_POOL2022
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        resources:                      # for pod autoscaling
+          limits:
+            cpu: 1                      # 1 cpu = 1 vcore = 1000m (milicores) = 4 GiB memory (RAM)
+            memory: 1Gi                 # nodepool capacity 4 vcpus, 16 GiB memory (2 nodes)
+          requests:
+            cpu: .5
+            memory: 500Mi
+        ports:
+          - containerPort: 80
+        lifecycle:
+          postStart: 
+            exec: 
+              command: 
+                - powershell.exe
+                - "-c"
+                - "write-output ${Env:AZP_POOL} - ${Env:AZP_URL} - ${Env:MY_POD_NAME} > postStart.txt"
+          preStop:
+            exec:
+              command: ["powershell.exe", "-File", "deleteAgentByName.ps1"]
+      terminationGracePeriodSeconds: 60        #time for preStop to get executed, then container will terminate
+      #   volumeMounts:
+      #   - mountPath: C:\azp\agent\_work
+      #     name: node-volume
+      # volumes:
+      # - name: node-volume
+      #   hostPath:
+      #     path: C:\Users\ntadmin\AzDOagent
+      #     type: DirectoryOrCreate
+        
+
+
+# kubectl apply -f ReplicaController.yml -n=azdo
+# Kubectl delete deployment azdo-deployment-hpa -n=azdo

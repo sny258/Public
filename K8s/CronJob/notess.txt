@@ -1,0 +1,9 @@
+--- create container image and push to ACR ---
+
+az acr build --image agentimage2022cronjob:v1.0 --registry glbldvazdoagentpoolacr --file Dockerfile . --platform windows
+
+v1.0  --  sanjay (copy start.ps1/cronjob_start.ps1/deleteAgentByName.ps1 to container)
+# docker image won't run any command at startup, k8s manifest will be doing that (so that we don't need to create the new docker image everytime if we want to run other script at startup)
+# cronjob_start.ps1 will check the agent count in agentpool, if its less than 
+5 then create and register the new agent at container startup.
+# deleteAgentByName.ps1 will execute at preStop to delete the agent (online, using pod name) before pod dies.

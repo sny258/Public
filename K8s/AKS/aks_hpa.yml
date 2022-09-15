@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+ name: azdo-deployment-hpa
+ #namespace: kube-system
+spec:
+  maxReplicas: 8
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: azdo-deployment-hpa
+  targetCPUUtilizationPercentage: 50
+
+
+
+# kubectl apply -f aks_hpa.yml -n=azdo
+# kubectl delete hpa azdo-deployment-hpa -n=azdo
+
+# kubectl get hpa azdo-deployment-hpa --watch -n=azdo
+
+# az aks nodepool update --enable-cluster-autoscaler --min-count 1 --max-count 3 -g glbl-dv-aks-poc-rgp -n ws2022 --cluster-name glbl-dv-azdo-agentpool-aks
+
+# az aks update --resource-group glbl-dv-aks-poc-rgp --name glbl-dv-azdo-agentpool-aks --enable-cluster-autoscaler --min-count 1 --max-count 3

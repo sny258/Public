@@ -1,0 +1,69 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: azdo-deployment-scaledjob
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        nodeSelector:
+          "agentpool": ws2022
+        containers:
+        - name:  azdo-agent22-keda
+          image: glbldvazdoagentpoolacr.azurecr.io/agentimage2022azcli:v3.5
+          env:
+            - name: AZP_URL
+              valueFrom:
+                secretKeyRef:               # fetching values from kubernetes secrets
+                  name: azdevops
+                  key: AZP_URL
+            - name: AZP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: azdevops
+                  key: AZP_TOKEN
+            - name: AZP_POOL
+              valueFrom:
+                secretKeyRef:
+                  name: azdevops
+                  key: AZP_POOL2022
+            # - name: MY_POD_NAME
+            #   valueFrom:
+            #     fieldRef:
+            #       fieldPath: metadata.name
+        #   resources:                      # for pod autoscaling
+        #     limits:
+        #       cpu: 1                      # 1 cpu = 1 vcore = 1000m (milicores) = 4 GiB memory (RAM)
+        #       memory: 1Gi                 # nodepool capacity 4 vcpus, 16 GiB memory (2 nodes)
+        #     requests:
+        #       cpu: .5
+        #       memory: 500Mi
+        #   ports:
+        #     - containerPort: 80
+  pollingInterval: 30
+  successfulJobsHistoryLimit: 2             #means how many jobs/pods will remain in kubernetes
+  failedJobsHistoryLimit: 2
+  maxReplicaCount: 8   
+  scalingStrategy:
+    strategy: "default"               
+  triggers:
+  - type: azure-pipelines
+    metadata:
+      poolID: "209"
+      organizationURLFromEnv: "AZP_URL"
+      personalAccessTokenFromEnv: "AZP_TOKEN"
+
+
+
+# kubectl apply -f ScaledJob_KEDA.yml -n=azdo
+# kubectl get scaledjob -n=azdo
+# kubectl delete scaledjob/azdo-deployment-scaledjob -n=azdo
+
+# Note: Atleast one agent is required in agent pool if using ScaledJob for pipelines.
+
+# It will not create any deployment or hpa, it will create new job that job will create a new pod.
+# for every pipeline a new job will be created and it should be completed after pipeline execution.
+# job will completed only when pod status is completed, for that need to run the agent for only one job execution i.e. ./run.cmd --once
+# since we are running agent for one job only, in this case finally block of start-deleteAgents.ps1 will also get executed and will delete the agent after job completion. (we can use start.ps1 only in this case sicne finally block is getting executed for auto cleaning)
+
+
