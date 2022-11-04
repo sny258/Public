@@ -1,0 +1,201 @@
+trigger:
+  branches:
+    include:
+    - main
+    #- feat/aks_improvments
+  paths:
+    include:
+    - iac/cloud/azure/b2e/AKSagents/CronJob/Dockerfile
+
+# schedules:
+#   - cron: "0 0 8-14 * 3"
+#     displayName: Tigger every 2nd Wednesday of the month at midnight for server image updates
+#     branches:
+#       include:
+#       - main
+#       #- feat/aks_improvments
+#     always: true
+
+pool:
+  name: DEVNestleEUR
+
+variables:
+  - group: ACR_w2k
+  - group: tfdev
+  - name: Version
+    value: $(Build.BuildNumber)
+
+stages:
+
+# - stage: Test_Approval
+#   displayName: Test_Approval
+#   jobs:
+#   - deployment: test_approval             #Environment approval only supported in deployment jobs
+#     displayName: test_approval
+#     #pool:
+#     #  name: string
+#     environment: 'aks_dev'
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - task: PowerShell@2
+#             displayName: 'approval_task'
+#             inputs:
+#               targetType: 'inline'
+#               script: |
+#                 write-host "this task is executed after approval"
+
+- stage: Build_Agent_Image
+  displayName: Build_Agent_Image
+  jobs:  
+  - job: Build
+    displayName: Build
+    steps:
+
+      - task: DownloadSecureFile@1
+        displayName: 'Download certificate-pem file'
+        inputs:
+          secureFile: glbl-dv-stig-adopipeline-001-spn.pem
+
+      - task: CopyFiles@2
+        displayName: 'Copying certificate-pem to working directory'
+        inputs:
+          SourceFolder: '$(Agent.TempDirectory)'
+          Contents: glbl-dv-stig-adopipeline-001-spn.pem
+          TargetFolder: '$(Build.SourcesDirectory)'
+
+      - task: PowerShell@2
+        displayName: 'Build_Push_Image'
+        inputs:
+          targetType: 'inline'
+          script: |
+            #$Version = "$(Get_Image_Version.Version)"
+            #write-host $Version
+            #$Dockerfile = Get-ChildItem | Where-Object {$_.name -like "dockerfile*"}
+            #write-host $Dockerfile
+            try {
+              write-host "connecting to Azure"
+              az login --service-principal --username $(client_id) --tenant $(tenant_id)  --password '$(Build.SourcesDirectory)/glbl-dv-stig-adopipeline-001-spn.pem'
+              az account set --subscription $(subscription_id)
+              az account show
+            }
+            catch {
+              $errorMessage = $error[0].Exception.Message
+              Write-Host $errorMessage
+              Exit 1        
+            }
+            write-host "Creating and pushing container image to ACR"
+            az acr build --image $(imageRepository)":"$(Version) --registry $(containerRegistry) --file Dockerfile . --platform windows
+          errorActionPreference: 'silentlyContinue'
+          workingDirectory: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/CronJob'
+
+- stage: Deploy_Agent_Image_to_AKS
+  displayName: Deploy_Agent_Image_to_AKS
+  dependsOn: Build_Agent_Image
+  condition: succeeded()
+  jobs:
+  - job: Deploy
+    displayName: Deploy
+    steps:
+      - checkout: none
+      
+      - task: KubectlInstaller@0
+        inputs:
+          kubectlVersion: 'latest'
+
+      # - task: Kubernetes@1
+      #   inputs:
+      #     connectionType: 'Azure Resource Manager'
+      #     azureSubscriptionEndpoint: 'w2k_Subscription'
+      #     azureResourceGroup: 'glbl-dv-aks-poc-rgp'
+      #     kubernetesCluster: 'glbl-dv-azdo-agentpool-aks'
+      #     command: 'login'
+      
+      # - task: replacetokens@5
+      #   inputs:
+      #     rootDirectory: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/CronJob'
+      #     targetFiles: 'cronjob_replacetoken.yml'
+      #     encoding: 'auto'
+      #     tokenPattern: 'doublebraces'
+      #     writeBOM: true
+      #     actionOnMissing: 'fail'
+      #     keepToken: true
+      #     actionOnNoFiles: 'fail'
+      #     enableTransforms: false
+      #     enableRecursion: false
+      #     useLegacyPattern: false
+      #     enableTelemetry: true
+
+      # - task: PowerShell@2
+      #   displayName: 'Deploy'
+      #   inputs:
+      #     targetType: 'inline'
+      #     script: 'kubectl apply -f cronjob_replacetoken.yml -n=azdo'         # --record=true will be depreceated soon
+      #     workingDirectory: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/CronJob'
+          
+      - task: HelmInstaller@0
+        inputs:
+          helmVersion: '2.14.1'
+          installKubectl: true
+
+      - task: HelmDeploy@0
+        displayName: helm install
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscription: 'w2k_Subscription'
+          azureResourceGroup: 'glbl-dv-aks-poc-rgp'
+          kubernetesCluster: 'glbl-dv-azdo-agentpool-aks'
+          namespace: 'azdo'
+          command: 'upgrade'
+          chartType: 'FilePath'
+          chartPath: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/helm/aks-agent'
+          releaseName: 'aks-agent'
+          overrideValues: 'deployment.image=$(containerRegistry)".azurecr.io/"$(imageRepository),deployment.tag=$(Version)'
+
+      # - task: replacetokens@5
+      #   inputs:
+      #     rootDirectory: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/helm/aks-agent'
+      #     targetFiles: 'values_replacetoken.yaml'
+      #     encoding: 'auto'
+      #     tokenPattern: 'doublebraces'
+      #     writeBOM: true
+      #     actionOnMissing: 'fail'
+      #     keepToken: true
+      #     actionOnNoFiles: 'fail'
+      #     enableTransforms: false
+      #     enableRecursion: false
+      #     useLegacyPattern: false
+      #     enableTelemetry: true
+
+      # - task: HelmDeploy@0
+      #   displayName: helm install
+      #   inputs:
+      #     connectionType: 'Azure Resource Manager'
+      #     azureSubscription: 'w2k_Subscription'
+      #     azureResourceGroup: 'glbl-dv-aks-poc-rgp'
+      #     kubernetesCluster: 'glbl-dv-azdo-agentpool-aks'
+      #     namespace: 'azdo'
+      #     command: 'upgrade'
+      #     chartType: 'FilePath'
+      #     chartPath: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/helm/aks-agent'
+      #     releaseName: 'aks-agent'
+      #     valueFile: '$(Build.SourcesDirectory)/iac/cloud/azure/b2e/AKSagents/helm/aks-agent/values_replacetoken.yaml'
+      
+      - task: HelmDeploy@0
+        displayName: helm rollback
+        condition: failed()
+        inputs:
+          connectionType: 'Azure Resource Manager'
+          azureSubscription: 'w2k_Subscription'
+          azureResourceGroup: 'glbl-dv-aks-poc-rgp'
+          kubernetesCluster: 'glbl-dv-azdo-agentpool-aks'
+          namespace: 'azdo'
+          command: 'rollback'
+          arguments: 'aks-agent'
+
+      - task: DeleteFiles@1
+        displayName: 'Delete certificate-pem file'
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: 'glbl-dv-stig-adopipeline-001-spn.pem'
