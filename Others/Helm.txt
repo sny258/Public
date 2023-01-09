@@ -1,0 +1,50 @@
+--------- HELM ---------
+
+** Helm is widely known as "the package manager for Kubernetes". 
+** to install helm, downloadthe helm.exe and add path to system environmental variables 
+
+helm create example-app						#this will create the chart directory with various folders
+
+example-app/
+  Chart.yaml          # A YAML file containing information about the chart
+  LICENSE             # OPTIONAL: A plain text file containing the license for the chart
+  README.md           # OPTIONAL: A human-readable README file
+  values.yaml         # The default configuration values for this chart
+  values.schema.json  # OPTIONAL: A JSON Schema for imposing a structure on the values.yaml file
+  charts/             # A directory containing any charts upon which this chart depends.
+  .helmignore         # 
+  templates/          # A directory of templates that, when combined with values, will generate valid Kubernetes manifest files.
+  templates/NOTES.txt # OPTIONAL: A plain text file containing short usage notes
+
+** delete all the files from templates folder except _helpers.tpl and add own manifest files with variable syntax like below
+
+    spec:
+      containers:
+      - name: "{{ .Values.name }}"
+        image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
+		
+		
+helm template example-app app-folder					#command: helm template <chart_name> <chart_directory>, to validate the yaml's
+											#If in same directory, no need to provide folder path
+
+** update the values.yaml file also with the values needs to be feeded to templates
+
+	deployment:
+	  image: "aimvector/python"
+	  tag: "1.0.4"
+	name: example-app
+  
+  
+helm install example-app app-folder --values ./example-app/values.yaml
+
+helm list 																#to see all the helm releases (charts deployed)
+
+helm upgrade example-app app-folder --values ./example-app/values2.yaml
+
+helm upgrade example-app app-folder	--install										#will install if not the upgrade
+
+helm upgrade example-app app-folder	--atomic										#automatic rollback if upgrade fails
+
+helm rollback example-app app-folder											#rollback to previous release version
+
+helm uninstall example-app app-folder											#to delete the all the objects deployed from release

@@ -1,0 +1,82 @@
+--- Dockerfile ---
+
+#stage 1							#for building the app
+FROM node:latest as node				#taking node as base image							
+WORKDIR /app						#creating working directory inside image to execute commands
+COPY . .							#copy all the current directory files into image								
+RUN npm install
+RUN npm run build --prod				#create dist/demo-app folder which will be used in stage 2
+# or RUN ng vuild --prod (both are same)
+
+#stage 2							#for running the app
+FROM nginx:alpine
+COPY --from=node /app/dist/demp-app /usr/share/nginx/html
+
+
+--- Commands ---
+
+docker build -t sanju/demo-app:v1 .	
+
+docker images
+
+docker run -d -p 8080:80 sanju/demo-app:v1		#go to browser 'https://localhost:8080'
+
+docker ps 								#check the status of running containers
+docker ps -a							#lists all containers
+
+docker login -u <username> -p <password>
+
+docker tag sanju/demo-app:v1 sanju333/demo-app:v1	#tag the existing image 'HubUsername/RepoName:Version'
+
+docker push sanju333/demo-app:v1				#Will create new repo with sanju333/demp-app which will contain versions
+
+docker rm <Cont_ID>						#deletes the docker container/s
+
+docker image rmi <image_ID>					#deletes the docker image/s
+
+docker system prune						#remove all unused Docker images/containers/networks
+
+
+
+----- Docker COPY vs ADD ----
+
+COPY takes in a source and destination. It only lets you copy in a local or directory from your host (the machine-building the Docker image) into the Docker image itself.
+	COPY <src> <dest>
+
+ADD does that same but in addition, it also supports 2 other sources. 
+	A URL instead of a local file/directory.
+	Extract tar from the source directory into the destination.
+	ADD <src> <dest>
+
+A valid use case for ADD is when you want to extract a local tar file into a specific directory in your Docker image.	
+	ADD rootfs.tar.gz /. 
+	
+	
+
+----- Docker RUN vs CMD vs ENTRYPOINT ----
+
+RUN:		Mainly used to build images and install applications and packages. Builds a new layer over an existing image by committing the results.
+CMD: 		Sets default parameters that can be overridden from the Docker Command Line Interface (CLI) when a container is running.
+ENTRYPOINT: Default parameters that cannot be overridden when Docker Containers run with CLI parameters.
+
+
+** The best way to use a CMD instruction is by specifying default programs that should run when users do not input arguments in the command line.
+
+FROM ubuntu
+CMD ["echo", "Hello, Darwin"]
+
+docker build -t Darwin .
+
+docker run darwin				-->		Hello, Darwin
+docker run Darwin hostname		-->     6e14beead430
+
+
+** In Dockerfiles, an ENTRYPOINT instruction is used to set executables that will always run when the container is initiated. Unlike CMD commands, ENTRYPOINT commands cannot be ignored or overridden—even when the container runs with command line arguments stated.
+
+FROM ubuntu
+ENTRYPOINT ["echo", "Hello, Darwin"]
+
+docker build -t Darwin .
+
+docker run darwin				-->		Hello, Darwin
+docker run Darwin hostname		-->     Hello, Darwin 6e14beead430
