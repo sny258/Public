@@ -39,6 +39,8 @@ git branch -D main			-- delete a branch locally
 
 git remote add origin https://snyverma1994@dev.azure.com/snyverma1994/sanju728/_git/Test		-- to add the remote branch alias
 
+git remote -v 				-- to find the remote git repo
+
 git push origin master		-- to push local branch to Remote branch
 
 git push origin dev			-- to push local branch to Remote branch
