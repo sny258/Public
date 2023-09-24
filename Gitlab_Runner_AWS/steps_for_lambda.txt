@@ -1,0 +1,30 @@
+********* steps to create and upload lambda script ************
+
+1. create the python script as required
+
+2. create new python environment
+	python -m venv venv
+
+3 Create a folder for the deployment package
+	New-Item -ItemType Directory -Force -Path .\deployment_package
+
+4. Activate the virtual environment
+	source .\venv\Scripts\Activate	#for linux
+	.\venv\Scripts\Activate			#for windows (bypass execution policy: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass)
+
+5. Install the required libraries in the virtual environment
+	pip install requests python-gitlab boto3 -t .\deployment_package
+
+6. Deactivate the virtual environment
+	deactivate
+
+7. Copy the Lambda function code to the deployment package folder
+	Copy-Item .\lambda_function.py .\deployment_package -Force
+
+8. Zip the deployment package
+	Compress-Archive -Path .\deployment_package\* -DestinationPath my_lambda_function.zip
+
+9. Remove the deployment package folder (optional)
+	Remove-Item -Path .\deployment_package -Recurse -Force       
+
+NOTE: Compress-Archive -Path .\my_lambda_function\* -DestinationPath my_lambda_function.zip

@@ -1,0 +1,75 @@
+
+---------- Terraform -------------------------
+
+download terraform and azure CLI
+Install terraform and azure CLI on machine
+using az login connect to azure subscription
+write script for resources
+
+main.tf file				-- file with terraform script, what we need to create
+Output.tf file				-- what output we want to after terraform apply
+variables.tf file			-- variables which can be used in main.tf FILE
+
+** Automatically backend will be the directory where main.tf file is present, terraform.tfstate file will be generated her.
+	but if we want, we can specify the backend by adding code block in main.tf file.
+
+terraform init						-- initialize a backend and Provider Plugins.
+
+terraform validate 					-- to verify Configuration/Syntax
+
+terraform fmt						-- to check formate of script
+
+terraform plan						-- Will display what main.tf will going to do
+									-- You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run "terraform apply" now.
+
+terraform plan -out xxx				-- will save the plan to xxx file, which can be executed later
+
+terraform apply						-- to deploy everything present in main.tf file
+terraform apply "xxx"				-- will execute the plan xxx
+terraform apply -auto-approve		-- to auto approve the apply
+
+terraform.tfstate					-- this file generated after apply command, and it shows all info by created infra
+
+terraform output --json				-- this will show output details in JSON formate
+
+terraform destroy					-- to destroy everything we created via main.tf file (All resources)
+
+terraform state list				-- show all available resource_type.name (ex- azuredevops_project.project)
+
+terraform destroy -target RESOURCE_TYPE.NAME										-- to destroy specific resource
+terraform destroy -target RESOURCE_TYPE.NAME -target RESOURCE_TYPE2.NAME			-- to destroy multiple resources
+
+
+
+** State Lock Issue --> when a developer don't type Yes/No after terraform apply and at the same time other developer exec terraform apply.
+
+** Little Demo -- youtube.com/watch?v=i-Ky1Tut_2I
+
+** Usually Backend is the place where all the .tf files are present locally.
+	Backend is where 'terraform.tfstate' file will be generated and terraform will refer it for future operations.
+
+** We can change the Backend also, Most preferably on Cloud so that every developer can work on the same Infra.
+	We can change the backedn locally also if we want, but that is a rare scenario.
+
+** for local change of backend, Add below code plock to main.tf file
+	Demo:- terraform.io/language/settings/backends/local
+	
+	terraform {
+	  backend "local" {
+		path = "C:/Users/sanjay.c.verma/Desktop/tf backend/terraform.tfstate"
+	  }
+	}
+	
+** When changing the backend locally, Terraform will give us option to migrate the state file when using 'terraform init' command.
+
+ 	-- If you wish to attempt automatic migration of the state, use "terraform init -migrate-state".
+ 	-- If you wish to store the current configuration with no changes to the state, use "terraform init -reconfigure".
+	
+** for Remote change of Backend, Add below code to main.tf file
+	ex:- Azure Storage account has a Blob container to store file (will act as Backend).
+	Demo:- https://www.terraform.io/language/settings/backends/azurerm
+	Demo Youtube:- https://www.youtube.com/watch?v=d7F1KmeeFyI
+	
+	
+	
+	

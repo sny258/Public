@@ -1,0 +1,26 @@
+--- update Deployment ---
+
+kubectl set image deployment/nginx-deployment nginx=nginx:1.16.1		#
+	
+kubectl rollout status deployment nginx-deployment			#will show the status of current deployment 
+
+kubectl rollout history deployment nginx-deployment			#will show the all deployments with revision
+
+kubectl rollout undo deployment nginx-deployment --to-revision=2
+
+
+kubectl scale deployment nginx-deployment --replicas=10
+
+kubectl apply -f nginx-deployment.yml --record=true			#to record the upgrade history
+
+
+kubectl scale deployment azdo-deployment-hpa --replicas=6 -n=azdo
+
+kubectl scale deployment azdo-deployment-hpa --replicas=2 -n=azdo
+
+kubectl set image deployment/azdo-deployment-hpa azdo-agent22=glbldvazdoagentpoolacr.azurecr.io/agentimage2022azcli:v3.4 -n=azdo
+
+kubectl rollout undo deployment nginx-deployment		#to rollback to last deployment	
+
+
+** Both ConfigMaps and secrets store the data the same way, with key/value pairs, but ConfigMaps are meant for plain text data, and secrets are meant for data that you don't want anything or anyone to know about except the application

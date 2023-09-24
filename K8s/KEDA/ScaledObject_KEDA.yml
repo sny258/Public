@@ -1,0 +1,45 @@
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: pipeline-auth
+# data:
+#   personalAccessToken: <base64 encoded PAT>
+#---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: pipeline-trigger-auth
+spec:
+  secretTargetRef:
+    - parameter: personalAccessToken
+      name: azdevops
+      key: AZP_TOKEN
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: azdo-deployment-scaledobject
+spec:
+  scaleTargetRef:
+    name: azdo-deployment-keda
+  minReplicaCount: 2
+  maxReplicaCount: 8 
+  triggers:
+  - type: azure-pipelines
+    metadata:
+      poolID: "209"                                 # nestle-dev-windows2022
+      organizationURLFromEnv: "AZP_URL"
+    authenticationRef:
+     name: pipeline-trigger-auth
+
+
+
+# should be executed only after deployment execution
+# kubectl apply -f ScaledObject_KEDA.yml -n=azdo            #it will create an HPA along with it
+# kubectl get scaledobject -n=azdo
+# scaledobject is nothing but HPA
+
+# kubectl delete scaledobject/azdo-deployment-scaledobject -n=azdo
+# Always make sure first delete the scaledobject before deleting deployment
+
+# kubectl delete $(kubectl get scaledobjects,scaledjobs -oname)

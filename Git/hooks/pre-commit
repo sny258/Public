@@ -1,0 +1,9 @@
+#!/bin/sh
+
+echo pre-commit hooks starting !!!
+echo =============================
+echo                                                           
+
+#exit 1		#to exit
+
+c:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy RemoteSigned -command 'C:\Hooks\pre-commit.ps1'

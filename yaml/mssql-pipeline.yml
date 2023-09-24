@@ -1,0 +1,189 @@
+trigger: none
+
+variables:
+  - group: tfdev
+pool:
+    name: NestleAMS
+
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+    - job: GeneratingVARFile
+      steps:
+        - checkout: self
+          persistCredentials: true
+          clean: true 
+        - task: PowerShell@2
+          displayName: 'Validating whether the server is new or existing'        
+          inputs:
+            targetType: inline
+            script: |                 
+                $sql_name="$($env:sql_server_name)"  #glbl-dv-<servername>-<regioncode>-sqs
+                Write-Host "given sql_server $sql_name"
+                $resource_group_name="$($env:resourcegroup)"
+                $resource_group_name
+                Connect-AzAccount -CertificateThumbprint $(certificate_thumbprint) -ApplicationId $(client_id) -SubscriptionId $(subscription_id) -Tenant $(tenant_id) -ServicePrincipal                
+                $existing_server=(Get-AzSqlServer -ResourceGroupName $resource_group_name).ServerName
+                Write-Host "existing sql_server $existing_server"
+                $exist=$false
+                write-output "##vso[task.setvariable variable=existing_sql_server]$exist"
+                if($existing_server -ne $null -and $existing_server -ne ''){
+                if($existing_server | Where-Object { $_.Contains($sql_name)}){
+                $exist=$true
+                write-output "##vso[task.setvariable variable=existing_sql_server]$exist" 
+                write-output "$existing_sql_server"
+                }
+                }                            
+        - task: PowerShell@2
+          displayName: 'creating auto vars file for new server'
+          condition: eq(variables['existing_sql_server'], 'false')
+          inputs:
+            targetType: inline
+            script: |
+                $plainPassword ="$(client_certificate_password)"
+                $securePassword = $plainPassword | ConvertTo-SecureString -AsPlainText -Force
+                $vnet_name="$($env:vnet_name)"
+                Connect-AzAccount -CertificateThumbprint $(certificate_thumbprint) -ApplicationId $(client_id) -SubscriptionId $(subscription_id) -Tenant $(tenant_id) -ServicePrincipal | Out-Null
+                $vnet_rgname=(Get-AzResource | where Name -like "$($vnet_name)" | select ResourceGroupName).ResourceGroupName            
+                #$varfile = "$($env:subscriptionname)_$($env:resourcegroup).auto.tfvars"
+                $varfile="mssql.auto.tfvars"
+                $var_file_path = "$(Build.SourcesDirectory)\iac\variable\$($varfile)"
+                $region= "$($env:region)"
+                $locationcodes = @{"usea" = "eastus" ; "asse" = "southeastasia" ;"euwe" ="westeurope"}
+                $location = $locationcodes[$region]
+                $env="$($env:environment)"
+                $envcode=@{ "ex" = "DataExploration";"dv" = "Development";"in" = "Innovation";"it" = "Integration";"np" = "Non-Production";"pp" = "Pre-Production";"pr" = "Production";"rt" = "Run-Time";"sb" = "SandBox";"st" = "Staging";"ts" = "Test"}
+                $environment=$envcode[$env]
+                $sql_name="$($env:sql_server_name)"
+                $sql_server_name="glbl-$env-$sql_name-$region-sqs"
+                $skutier= "$($env:skutier)"
+                $pricing_tiercodes = @{"BusinessCritical" = "BC_Gen5" ; "GeneralPurpose" = "GP_Gen5" }
+                $pricing_tier=$pricing_tiercodes[$skutier]
+                $databases="$($env:name_of_databases)"
+                $db_names=$databases.Split(',')
+                $array=@()
+                foreach ($names in $db_names)
+                { 
+                  $naming="glbl-$($env)-$($names)-$($region)-sqd"
+                  $array += $naming  
+                 }
+
+                $db_name="[`"$($array -join '","')`"]" 
+                #$db_name                
+                
+                $env:varfile = $varfile                 
+                @"
+                sql_name="$($sql_server_name)"
+                db_name=$($db_name)
+                location="$($location)"
+                subscription_name="$($env:subscriptionname)"
+                environment="$($environment)"
+                resource_group_name="$($env:resourcegroup)"
+                vnet_name="$($env:vnet_name)"
+                subnet_name="$($env:subnet_name)"
+                data_max="$($env:data_max_for_elastic_pool_in_GB)"
+                capacity="$($env:total_number_of_vcores_for_elastic_pool)" 
+                solution_name="$($env:solution_name)"
+                vnet_rgname="$($vnet_rgname)"
+                "@ | out-file -encoding utf8 -filepath "$var_file_path"
+                $varfiledir =  "$(Build.SourcesDirectory)\iac\variable\$($env:varfile)"
+                Get-Content "$varfiledir" 
+        - task: PowerShell@2
+          displayName: 'creating auto vars file for existing server'
+          condition: eq(variables['existing_sql_server'], 'true')
+          inputs:
+            targetType: inline
+            script: |
+                $plainPassword ="$(client_certificate_password)"
+                $securePassword = $plainPassword | ConvertTo-SecureString -AsPlainText -Force
+                #$vnet_name="$($env:vnet_name)"
+                Connect-AzAccount -CertificateThumbprint $(certificate_thumbprint) -ApplicationId $(client_id) -SubscriptionId $(subscription_id) -Tenant $(tenant_id) -ServicePrincipal | Out-Null
+                #$vnet_rgname=(Get-AzResource | where Name -like "$($vnet_name)" | select ResourceGroupName).ResourceGroupName            
+                #$varfile = "$($env:subscriptionname)_$($env:resourcegroup).auto.tfvars"
+                $varfile="mssql.auto.tfvars"
+                $var_file_path = "$(Build.SourcesDirectory)\iac\variable\$($varfile)"
+                $region= "$($env:region)"
+                $locationcodes = @{"usea" = "eastus" ; "asse" = "southeastasia" ;"euwe" ="westeurope"}
+                $location = $locationcodes[$region]
+                $env="$($env:environment)"
+                $envcode=@{ "ex" = "DataExploration";"dv" = "Development";"in" = "Innovation";"it" = "Integration";"np" = "Non-Production";"pp" = "Pre-Production";"pr" = "Production";"rt" = "Run-Time";"sb" = "SandBox";"st" = "Staging";"ts" = "Test"}
+                $environment=$envcode[$env]
+                $sql_server_name="$($env:sql_server_name)"
+                $databases="$($env:name_of_databases)"
+                $new_db_names=$databases.Split(',')
+                $array=@()
+                foreach ($names in $new_db_names)
+                { 
+                  $naming="glbl-$($env)-$($names)-$($region)-sqd"
+                  $array += $naming  
+                 }
+                $array
+                Write-Host "----"
+                $resource_group_name="$($env:resourcegroup)"
+                $epoolname=(Get-AzSqlElasticPool -ResourceGroupName $resource_group_name -ServerName $sql_server_name).ElasticPoolName
+                $existing_dbnames=(Get-AzSqlElasticPoolDatabase -ResourceGroupName $resource_group_name -ServerName $sql_server_name -ElasticPoolName $epoolname).DatabaseName
+                $existing_dbnames
+                $common=@()
+                foreach($item in $existing_dbnames){
+                if($item -in $array){
+                #Write-Host "$item present"
+                $common+=$item
+                }
+                }
+                Write-Host "----" 
+                $common
+                write-output "##vso[task.setvariable variable=same_db]$common"
+                $dbname_exist=$false
+                #Write-Host "$duplicates exists"
+                if ( $common.Length -eq 0 )
+                {
+                write-output "##vso[task.setvariable variable=db_exist]$dbname_exist"
+                $db_exist                  
+                $final=$existing_dbnames+$array
+                $new_db_names="[`"$($final -join '","')`"]" 
+                #$new_db_names
+                $capacity=(Get-AzSqlElasticPool -ResourceGroupName $resource_group_name -ServerName $sql_server_name).Capacity
+                $storage_max=(Get-AzSqlElasticPool -ResourceGroupName  $resource_group_name -ServerName $sql_server_name).StorageMB
+                $data_max=$storage_max*0.0009765625  # converting mb into gb
+                $env:varfile = $varfile                 
+                @"
+                sql_name="$($sql_server_name)"
+                db_name=$($new_db_names)
+                location="$($location)"
+                subscription_name="$($env:subscriptionname)"
+                environment="$($environment)"
+                resource_group_name="$($env:resourcegroup)"
+                data_max="$($data_max)"
+                capacity="$($capacity)"  
+                solution_name="$($env:solution_name)"                
+                "@ | out-file -encoding utf8 -filepath "$var_file_path"
+                $varfiledir =  "$(Build.SourcesDirectory)\iac\variable\$($env:varfile)"              
+                Get-Content "$varfiledir"  
+                }
+                else{
+                 $dbname_exist=$true
+                 write-output "##vso[task.setvariable variable=db_exist]$dbname_exist"
+                 $db_exist  
+                }
+        - task: PowerShell@2
+          displayName: "updating the snow ticket"
+          condition: eq(variables['db_exist'], 'true')        
+          inputs:
+            targetType: inline
+            script: |
+                write-host "$same_db"
+                exit 1                                                                                                                                                 
+        - task: PowerShell@2
+          displayName: Check-in Repo
+          inputs:
+            targetType: inline
+            script: |               
+                git branch
+                git checkout main
+                git branch
+                git pull
+                git add "$(Build.SourcesDirectory)/iac/variable/mssql.auto.tfvars"
+                git commit -m "files added from pipeline $($env:BUILD_DEFINITIONNAME) build number $($env:BUILD_BUILDNUMBER)"
+                git push origin HEAD:main 
+            workingDirectory: '$(Build.SourcesDirectory)'                                  

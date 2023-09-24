@@ -1,0 +1,42 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: QualityCheck
+  displayName: QualityCheck
+  jobs:
+    - job: CheckovJob
+      displayName: Run Checkov
+      steps:
+      
+      # to see the scan results in log 'docker run --tty --volume $(System.DefaultWorkingDirectory)/terraform:/tf bridgecrew/checkov --directory /tf'
+      - script: |
+          docker run --tty --volume $(System.DefaultWorkingDirectory)/terraform:/tf bridgecrew/checkov --directory /tf --output junitxml > $(System.DefaultWorkingDirectory)/checkov-report.xml
+        displayName: 'Checkov Static Code Analysis'
+        continueOnError: true
+        
+      - script: |
+          sed -i '$d' $(System.DefaultWorkingDirectory)/checkov-report.xml
+          sed -i '$d' $(System.DefaultWorkingDirectory)/checkov-report.xml
+        displayName: 'Removing last 2 lines from checkov-report'
+        #condition: always()
+        
+      - task: PublishTestResults@2
+        displayName: 'Publish Checkov Test Reuslts'
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: '**/*checkov-report.xml'
+          searchfolder: '$(System.DefaultWorkingDirectory)'
+          mergeTestResults: false
+          testRunTitle: 'Checkov Scan Results'
+          failTaskOnFailedTests: false
+          publishRunAttachments: true

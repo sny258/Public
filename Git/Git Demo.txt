@@ -1,0 +1,81 @@
+
+
+--- git Commands ------
+
+git init  					-- to initialize git folder
+git status 					-- for the branch 
+git touch index.html		-- will create this file
+git add index.html			-- 
+git commit 					-- commit changes ( will open editor, press i to add commect and then esc to escape via :wq command)
+
+git add -A  -- to add all files in go
+
+git commit -m "updated index.html"
+
+git checkout index.html  -- will match the file to last commit in case changes (kind of rollback after save, but not commited)
+git checkout -f  		-- will match all the files to last commit
+
+git log 		-- see the commit history 
+git log -p -2	-- see the last 2 commits, press q to exit then
+
+git diff 		-- diff between file, shows changes (help us find changes in file bnetween last commit and current save)
+
+git commit -a -m "skipped staging area"		-- for direct commit without adding existing updated files again (skips staging area)
+											-- but new file need to added first thne we can us this command over it also
+
+git rm --cached index.html		-- Delete from staging area only (i.e. between last commit and current save)
+git rm index.html				-- permanently delete from Hard drive
+
+git touch .gitignore			-- we can mention files which we don't want to consider
+
+git branch Dev				-- to create new branch
+git branch 					-- will show 2 branches now (green one is the one we are in at present)
+
+git checkout Dev 			-- will switch us to newly created Dev branch
+
+git checkout -b Dev 		-- will create and switch to newly created branch with single command
+
+git branch -D main			-- delete a branch locally
+
+git remote add origin https://snyverma1994@dev.azure.com/snyverma1994/sanju728/_git/Test		-- to add the remote branch alias
+
+git remote -v 				-- to find the remote git repo
+
+git push origin master		-- to push local branch to Remote branch
+
+git push origin dev			-- to push local branch to Remote branch
+
+git pull origin master		-- to pull local branch to Remote branch
+
+git branch -a				-- to see all local and Remote branches (below command is followed by this)
+
+git checkout <branch>		-- to get Remote branch in local repo which was not present locally
+
+
+
+------ Branch Names are Case Sensitive in GitBash -----------
+
+** for cloning a private azure repo when using git clone we have to provide the creds, they will be autosaved afterwords
+** modify any file and commit the changes in local system
+** for Pushing changes from local system to azure repo just use 'git push' command
+** now if we create a new branch in local system and want to push it use 'git push --set-upstream origin Dev' command
+
+** 'git -c http.sslVerify=false' to temporarily avoid SSL certification error  (git config --global http.sslVerify false, not secure)
+
+
+
+------ Merging Branches to Remote Repository ---------
+
+If you create a branch in your local repository, the remote repository is not aware of the branch’s existence. Before you can push the branch code in the remote repository, you set the remote repository as the upstream branch using the git pushcommand. This command simultaneously sets the upstream branch and pushes the branch contents to the remote repository.
+
+git push --set-upstream origin <branch name>
+
+
+
+------- Demo 1 -------------
+
+** first clone the github repo
+** git config --global user.name <username>
+** create a new branch and copy all the files
+** now add the files and commit the changes
+** git push --set-upstream origin dev

@@ -1,0 +1,123 @@
+
+---- Basic Linux Commnads ----
+
+present working directory:         			pwd 
+
+Files in present working directory:			ls
+Files details in date descending:			ls -ltr
+Files + hidden files in directory:			ls -a
+List of files only in directory:			ls -1   (ls minus one it is)
+
+to clear the terminal:						clear
+
+to get info about command:					man Command
+
+to give escalated privilages:				sudo
+
+to move to another directory/folder:		cd home/ubuntu , cd NewFolder/Folder1
+to move one folder back: 					cd ..
+to move one folder forward: 				cd -
+to move to home directory:					cd or cd ~
+to move to the root directory od OS:		cd /
+
+copy file to other directory:				cp FileToCopy DestPath
+copy file in same directory:				cp FileToCopy NewFileName
+copy directory with files:					cp -r FileToCopy DestPath  or cp -r FileToCopy DestPath (Forcefully)
+
+remove or delete the file:					rm FileToBeDeleted	(path can be given also)
+
+to create new directory:					mkdir NewDirectoryName  or  mkdir -p parentfoldername/childfoldername
+to delete the directory:					rmdir DirectoryToBeDeleted
+to delete the non-empty directory:			rm -r DirectoryToBeDeleted  or  rm -rf DirectoryToBeDeleted (Forcefully)
+
+rename a file or directory:					mv file1.txt file_001.txt
+move a file or directory:					mv sourcepath destPath
+
+create an empty file:						touch file.txt or touch file.py
+
+to print something in terminal:				echo Sanjay
+
+to read content of the file:				cat FileName
+create new file and add lines:				cat > file.txt	(ctrl+D to save)
+add lines to existing file:					cat >> file.txt  (ctrl+D to save)
+to merge 2 files:							cat file1.txt file2.txt > file3.txt 
+
+to check the file/folder size:				du -sh file/folder
+to check the disk space:					df -h(human readable) or df -m(mb)
+
+to show last few lines of any file:			tail -2 filename (last 2 lines)
+to show first few lines of any file: 		head -6 filename (first 6 lines)
+
+to compress file/folder:					tar -cvf zipfilename.gz filenames and folders (compress)
+to compress file/folder:					tar -xvf zipfilename.gz (extract)
+
+find any string/word in files/folder:		grep wordname filename
+
+to replace the text in a file:				sed “s/val1/val2” <file name>			(only 1st occurence will be replaced in a line)
+											sed “s/val1/val2/n” <file name>			(only nth occurence will be replaced in a line)
+											sed “s/val1/val2/g” <file name>			(all occurences will be replaced in a line)
+											sed “3 s/val1/val2” <file name>			(on specific line occurences will be replaced)
+											sed “3! s/val1/val2” <file name>		(apart from specific line,all occurences will be replaced)
+											
+											sed -i “3! s/val1/val2” <file name>		(-i is to make changes permanent)
+											
+											sed "1d" <file name>					(to delete the 1st line)
+											sed "1,3d" <file name>					(to delete the 1st to 3rd line)
+											sed "/India/d" <file name>				(to delete the lines with India in it)
+											
+											sed -i "/^$/d" <file name>				(to permanently delete the empty lines from the file)
+											
+											
+Editer for editing the files:				vi filename	 (press i to insert the lines. then press esc to get out of insert mode.)
+														 (type :wq and press enter to save and exit)
+														 (type :q! and press enter to close file without save)
+
+
+
+
+awk, find, grep, sed, tr, tail, head, du ....
+run level and boot process in linux
+
+
+to check the file/folder size:				du -sh file/folder
+to check the disk space:					df -h(human readable) or df -m(mb)
+
+to find the files:							find / -name file name (by name in whole system)
+											find /root -name file name (by name in root directory only)
+											find / -size -100k (files below 100kb)
+											find / -size +100k (files above 100kb)
+											find / -perm 777 (to check files with full permission)
+											
+total no.of lines,words & characters:  		wc filename ( total count)
+											wc -l filename ( only lines count)
+											wc -w filename ( only words count)
+											wc -c filename ( only characters count)
+											
+to show the line no. along with lines:		cat -n filename
+
+to replace the character of the word:		cat <filename> | tr “u” “o”
+											cat <filename> | tr -d “ ”  	(to remove space)
+											cat <filename> | tr “ ” “\n”    (to replace space to newline)
+										
+Cut sections from files:					ls -1 | cut -c 1-3				(will give first 3 char of file names only)
+											ls -1 | cut -c 1,5				(will give 1st & 5th char of file names only)
+											
+Cut sections from the lines:				cut -c 1,5 filename				(will give first 5 char of each line in file)
+											cut -c 2- filename				(will give 2nd to last char of each line in file)
+											cut -c -7 filename				(will give 1st to 7th char of each line in file)
+											
+Cut sections from the lines by fields:		cut -d "delimiter" -f (field no.) file.txt		(cut uses tab as a default field delimiter)
+											cut -f 1 filename								(will give first field(column) of the file)
+											cut -d " " -f 2 filename						(will give 2nd field with delimiter space)
+											
+											awk '{print $2}' filename						(will give 2nd filed(column) of the file)
+											awk '{print $2,$4}' filename					(will give 2nd & 4th filed of the file)
+											awk '{print $NF}' filename						(will give the last filed of the file)
+											awk '{print NR,$2}' filename					(will give line no. & 2nd filed of the file)
+											awk '{print NR ": " $2}' filename				(will give line no. & 2nd filed with ": " delimiter)
+											
+											ls -ltr | awk '{print $NF}' | cut -c 1-2		(awk & cut together)
+											
+											awk -F, '{print $2}' csvfile					(will give specific field from csv file)
+											awk '{if($3>40000) print $0}' csvfile			(will give lines all data($0) which have field3>40000)
+											awk 'length($0)>15' csvfile						(line whose length of character is more than 15)

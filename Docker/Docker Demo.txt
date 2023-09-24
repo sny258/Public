@@ -1,0 +1,206 @@
+#stage 1									-- for building the app
+FROM node:latest as node					-- taking node as base image							
+WORKDIR /app								-- creating working directory inside image to execute commands
+COPY . .									-- copy all the current directory files into image								
+RUN npm install
+RUN npm run build --prod					-- this will create dist/demo-app folder which will be used in stage 2
+# or RUN ng vuild --prod (both are same)
+
+#stage 2									-- for running the app
+FROM nginx:alpine
+COPY --from=node /app/dist/demp-app /usr/share/nginx/html
+
+
+------ create the Image ----------
+
+docker build -t sanju/demp-app:v1 .				-- go to dicerctory where docker file is present and execute given command
+
+** the image name must be followed by the dot which means that the path of the Docker build context and Dockerfile is the current folder.
+
+docker images									-- You can see all your images
+
+docker run -p 8080:80 sanju/demp-app:v1			-- run the app/container (need to stop container manually using app)
+docker run -d -p 8080:80 sanju/demp-app:v1		-- run the app in detach mode (best option)
+
+docker run -d -p 8080:80 <image_ID>				-- instead of repo:tag, we can directly use image id also if image is unique
+
+** go to browser 'https://localhost:8080'
+
+docker ps 				-- check the status of running containers
+docker ps -a			-- lists all containers
+
+
+---------- Push/Pull the Image ---------
+
+docker login -u <username> -p <password>				-- provide docker hub credentials (not recommended)
+
+docker login
+username					-- provide username
+password					-- provide password
+
+docker tag sanju/demp-app:v1 sanju333/demp-app:v1		-- First we need to tag the existing image 'HubUsername/RepoName:Version'
+
+docker push sanju333/demp-app:v1						-- this will create new repo with sanju333/demp-app which will contain versions
+
+** if we want to use the existing docker hub repo, then we have to create a local image with 'HubUsername/RepoName' with tag.
+	Then we can use the docker push command again.
+
+** go to docker hub and check the latest image wiht mentioned tag over there
+
+** Image can be pulled and used on any machine to test/run the App
+
+docker pull sanju333/demo-app:v1
+
+
+----------- Other Commands ---------
+
+docker ps -a							-- lists all containers
+docker stop <Cont_ID>					-- stops the running container
+docker start <Cont_ID>					-- starts the stopped container
+docker restart <Cont_ID>				-- restarts the stopped container
+
+docker stop $(docker ps -aq)			-- to stop all the containers
+
+docker rm <Cont_ID>						-- deletes the docker container/s
+docker rm -f <Cont_ID>					-- '-f' is the syntax for forcing
+
+docker rm $(docker ps -aq)				-- to delete all the containers
+
+docker image ls							-- lists all the images, it's image not images
+docker image rmi <image_ID>				-- deletes the docker image/s, if we force it will delete all images with same tag (same image id case)
+docker image rmi <repo>:<Tag>			-- in case tag is same, to delete specific version
+
+docker rmi $(docker images -aq)			-- to delete all the images
+
+docker system prune						-- You want to remove all unused Docker images, containers, and networks from your Docker host
+
+
+------------ Now we have made changes in Index.html file to change tab heading ---------
+
+** we will build a new image
+
+docker build -t sanju/demp-app:v2 .
+
+docker run -d -p 4200:80 <image_ID>				-- we can use the same port name if existing container is stopped.
+												-- now if we try to start the already existing container with port 4200, it will give error
+												
+docker tag <image_ID> sanju333/demp-app:v2
+
+docker push sanju333/demp-app:v2
+
+
+
+------ To move Images to Azure -----
+
+** Azure provides 'Azure Container Registry' to store the docker images.		
+
+** refer to the link for detailed demo 	-- https://www.youtube.com/watch?v=O5aXcmKc1HU&t=350s
+
+** We can create 'WebApp for Containers' to directly deploy docker images.
+	WebApp for Containers is also one of the Azure app Service to host Containerized Web Applications.
+	
+** Demo For CI/CD Pipeline 		-- https://www.azuredevopslabs.com/labs/vstsextend/docker/
+
+** Video For CI/CD Pipeline 	-- https://www.youtube.com/watch?v=xubKJB5MjXA
+
+
+
+---- Docker Lab KodeKloud -----
+
+** You are required to pull a docker image which will be used to run a container later. Pull the image nginx:1.14-alpine
+
+	docker pull nginx:1.14-alpine
+	
+** Run a container with the nginx:1.14-alpine image and name it webapp
+
+	docker run -d --name webapp nginx:1.14-alpine
+
+** We just downloaded the code of an application (webapp-color). What is the base image used in the Dockerfile?
+
+	vi /root/webapp-color/Dockerfile
+	
+** Build a docker image using the Dockerfile and name it webapp-color. No tag to be specified.
+
+	cd /root/webapp-color/
+	pwd												-- will give current directory
+	docker build -t webapp-color .
+	
+** what is the base operating system used by image python:3.6
+
+	docker run python:3.6 cat /etc/release*
+	
+** Build a new smaller docker image by modifying the same Dockerfile and name it webapp-color and tag it lite.
+
+	cd /root/webapp-color/
+	cat Dockerfile
+	vi Dockerfile								-- press esc and then i to insert, then esc and :wq for save and exit
+	docker build -t webapp-color:lite .
+	
+** Run a container named blue-app using image kodekloud/simple-webapp and set the environment variable APP_COLOR to blue.
+	Make the application available on port 38282 on the host. The application listens on port 8080.
+
+	docker run -p 38282:8080 --name blue-app -e APP_COLOR=blue -d kodekloud/simple-webapp
+	
+** Deploy a mysql database using the mysql image and name it mysql-db.
+	Set the database password to use db_pass123. Lookup the mysql image on Docker Hub and identify the correct environment variable to use for setting the root password.
+	
+	docker run --name mysql-db -e MYSQL_ROOT_PASSWORD=db_pass123 -d mysql
+	
+**	To know the env field from within a mysql-db container		
+
+	docker exec -it mysql-db env
+	
+** What is the CMD configured on the wordpress image?
+	
+	cat Dockerfile-wordpress							-- execute once inside root folder
+	cat Dockerfile-ubuntu
+	cat Dockerfile-wordpress | grep CMD					-- will get CMD details only
+
+** Run an instance of the ubuntu image to run the sleep 1000 command at startup.
+	
+	docker run -d ubuntu sleep 1000
+
+
+
+--------- Docker Compose ---------
+
+** First create a redis database container called redis, image redis:alpine.
+
+	docker run -d --name redis redis:alpine
+
+** Next, create a simple container called clickcounter with the image kodekloud/click-counter, link it to the redis container that we created in the previous task and then expose it on the host port 8085. The clickcounter app run on port 5000.
+
+	docker run -d --name clickcounter --link redis:redis -p 8085:5000 kodekloud/click-counter
+
+** Let's clean up the actions carried out in previous steps. Delete the redis and the clickcounter containers.
+
+	docker stop <cont_id> <cont_id>
+	docker rm <cont_id> <cont_id>
+
+** Create a docker-compose.yml file under the directory /root/clickcounter. Once done, run docker-compose up. The compose file should have the exact specification as follows -
+
+redis service specification - Image name should be redis:alpine.
+clickcounter service specification - Image name should be kodekloud/click-counter, app is run on port 5000 and expose it on the host port 8085 in the compose file.
+
+	version: '3.0'
+	services:
+  	  redis:
+    	  image: redis:alpine
+  	  clickcounter:
+    	  image: kodekloud/click-counter
+    	  ports:
+    	  - 8085:5000
+		  
+** Run a mysql container named mysql-db using the mysql image. Set database password to db_pass123
+
+	docker run -d --name mysql-db -e MYSQL_ROOT_PASSWORD=db_pass123 mysql
+	
+** Run a mysql container again, but this time map a volume to the container so that the data stored by the container is stored at /opt/data on the host.
+
+	docker run -v /opt/data:/var/lib/mysql -d --name mysql-db -e MYSQL_ROOT_PASSWORD=db_pass123 mysql
+	
+** We have now re-written data again. Run the get-data.sh script to ensure data is present.
+
+	sh get-data.sh
+	
+** 

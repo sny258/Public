@@ -1,0 +1,99 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+#trigger:
+#  branches:
+#    include:
+#    - main
+#  paths:
+#    include:
+#    - Checkov
+
+pool:
+  vmImage: Windows-latest
+
+stages:
+- stage: QualityCheck
+  displayName: QualityCheck
+  jobs:
+    - job: CheckovJob
+      displayName: Run Checkov
+      steps:
+      
+      - task: Bash@3
+        inputs:
+          targetType: 'inline'
+          script: 'pip install checkov'
+        displayName: Install Checkov
+
+      # task to check the checkov results only, it will fail untill all checks passed  
+      # - script: |
+      #     checkov --directory $(System.DefaultWorkingDirectory)/checkov
+      #   displayName: 'Checkov Static Code Analysis'
+      
+      - script: |
+          checkov --directory $(System.DefaultWorkingDirectory)/checkov --output junitxml > $(System.DefaultWorkingDirectory)/checkov-report.xml
+        displayName: 'Checkov Static Code Analysis'
+        #continueOnError: true
+        
+      - task: PublishTestResults@2
+        displayName: 'Publish Checkov Test Reuslts'
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: '**/*checkov-report.xml'
+          searchfolder: '$(System.DefaultWorkingDirectory)'
+          mergeTestResults: false
+          testRunTitle: 'Checkov Scan Results'
+          failTaskOnFailedTests: false
+          publishRunAttachments: true
+
+- stage: Approval
+  displayName: Approval
+  jobs:
+    - job: Approve
+      displayName: Approve
+      pool: server                        # This is required to run Manual Validation task
+      steps:
+      - task: ManualValidation@0
+        timeoutInMinutes: 60
+        inputs:
+          notifyUsers: |
+            'sny.verma1994@gmail.com'
+          instructions: 'Review the plan in the next hour'
+          onTimeout: 'reject'
+
+- stage: Validate
+  displayName: Validate
+  jobs:
+    - job: tfValidate
+      displayName: tfValidate
+      steps:
+      #- checkout: none
+      - task: TerraformInstaller@0
+        inputs:
+          terraformVersion: 'latest'
+      - task: PowerShell@2
+        displayName: 'Terraform init'
+        # env:
+        #   ARM_ACCESS_KEY: $(access_key)
+        #   ARM_SAS_TOKEN: $(sas_token)
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform init 
+            # $statefile =  "$subscription"+"_"+"$rgname"+"_"+"$resouce"+".tfstate"
+            # terraform init -backend-config="container_name=<c>" -backend-config="storage_account_name=<s>" -backend-config="key=$statefile"
+          workingDirectory: '$(System.DefaultWorkingDirectory)/checkov'
+      - task: PowerShell@2
+        displayName: 'Terraform validate'
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform validate
+          workingDirectory: '$(System.DefaultWorkingDirectory)/checkov'

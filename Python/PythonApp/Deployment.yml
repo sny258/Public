@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pythonapp-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pythonapp
+  template:
+    metadata:
+      labels:
+        app: pythonapp
+    spec:
+      containers:
+      - name: pythonapp
+        image: sanju333/python-app:v1                       #<registry>/<image-name>:<tag>
+        #imagePullPolicy: IfNotPresent/Always/Never         #IfNotPresent (Default), if tag is not latest
+        ports:
+        - containerPort: 5000                               #Pod/Container port
+      #imagePullSecrets:
+        #- name: dockerhub-secret                           #when using private repo, create secret
+
+
+# kubectl create secret docker-registry dockerhub-secret --docker-server="docker.io" --docker-username="sanju333" --docker-password="Sanju@7**"

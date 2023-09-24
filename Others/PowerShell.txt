@@ -1,0 +1,306 @@
+
+------- PowerShell -------
+
+$PSVersionTable												#to get the powershell version
+						
+Get-Command <cmd>											#to get info about any command
+						
+pwd															#present working directory
+						
+Get-ChildItem/dir/ls										#files in pwd 
+Get-ChildItem/dir/ls -hidden								#to show hidden files 
+Get-ChildItem/dir/ls -Name									#to show name of the files
+						
+clear														#to clear the terminal
+						
+Copy-Item/copy/cp <file/folder> <dest folder>				#to copy files
+						
+Move-Item/move/mv <file/folder> <dest folder>				#move a file
+						
+Remove-Item/rm/del/rmdir <file/folder>						#delete a file
+						
+Rename-Item/ren/mv <file/folder> <NewName>					#rename a file
+						
+cd															#to move to the directory
+cd..														#to move out one directory
+
+New-Item <path/FolderName> -ItemType Directory				#Create a directory
+New-Item <path/FileName>									#Create a file	
+mkdir <path/FolderName/FileName>							#to create file within a folder
+
+set-content <path/FileName> 'content'						#to add content to a file
+
+get-content <path/FileName>									#to get the content of a file
+
+
+------ Recurce & Force -----
+
+** When you want a PowerShell command to search sub-directories -Recurse is a life saver.  In other contexts this concept is called iteration, or sub-directory recursion.
+
+Get-ChildItem -path "C:\Program Files\"
+Get-ChildItem -path "C:\Program Files\" -Recurse					#will give subfolders/files details 
+Get-ChildItem -path $Directory -Recurse -Include *.exe 				#will give subfolders/files with .exe extension details 
+
+Remove-Item -Path "C:\Program Files\delete.txt" -Force				#will delete the file forcefully
+Remove-Item -LiteralPath "C:\Program Files"							#will prompt about subfolders/Files deletion
+Remove-Item -LiteralPath "C:\Program Files"	-Recurse				#will delete subfolders/Files without prompt
+Remove-Item -LiteralPath "C:\Program Files" -Force -Recurse			#will delete subfolders/Files forcefully
+
+
+---- Variables -----
+
+$var1="variable1"											#to set the varibles
+$var2= Get-Location											#to set command output to variable
+$var2														#to print the variable
+
+Clear-Variable -Name var2									#will assign null value to variable
+Remove-Variable -Name var1									#will delete the variable
+
+[int]$number = 8											#integer type variable
+[string]$words = "Hello"									#string type variable
+[datetime] $dates = "09/12/91"  							#The string is converted to a DateTime object.
+
+$Global:Computers = "Server01"								#Global variable, can be accesed by many functions
+
+
+
+----- Operators -------
+
+eq (equals)
+ne (not equals)
+gt (greater than)
+ge (greater than or equals to)
+lt (less than)
+le (less than or equals to)		
+
+=  (Simple assignment operator)								#C=A+B
++= (Add AND assignment operator)							#C+=B (C=C+B)
+-= (Subtract AND assignment operator)						#C-=A (C=C-A)
++  (Addition)
+-  (Subtraction)
+*  (Multiplication)
+/  (Division)												#Divides left-hand operand by right-hand operand.
+%  (Modulus)												#Divides left-hand operand by right-hand operand and returns remainder.
+
+#A is true and B is false
+AND (logical and)											#(A -AND B) is false
+OR (logical or)												#(A -OR B) is true
+NOT (logical not)											#-NOT(A -AND B) is true
+
+
+
+----- Loops ---------
+
+for($i = 0; $i -lt 5; $i++) {write-output $i}				#for simple looping/iteration
+
+$array = @("item1", "item2", "item3")						#array of items
+for($i = 0; $i -lt $array.length; $i++){ $array[$i] }		#for loop over array of items
+OR
+foreach ($item in $array) { $item }							#foreach loop over array of items
+
+
+----- Conditions ----
+
+$x=15
+if($x -le 10){
+   write-host("This is if statement")
+}elseif ($x -le 20){
+   write-host("This is elseif statement")
+}else {
+   write-host("This is else statement")
+}
+
+
+switch(3){
+   1 {"One"}
+   2 {"Two"}
+   #3 {"Three"}
+   3 {"Three"; break }
+   4 {"Four"}
+   3 {"Three Again"}
+}
+
+switch(3,2){
+   1 {"One"}
+   2 {"Two"}
+   3 {"Three"}
+   #3 {"Three"; break }
+   4 {"Four"}
+   3 {"Three Again"}
+}
+
+
+
+------ Array  ------
+
+$myList = 1,2,3,4,5
+or
+$myList = 1..5
+or
+$myList = @(1,2,3,4,5) 
+or
+$myList = @(1..5)
+or
+$emptyList = @()
+
+
+write-host("Print all the array elements")
+$myList
+
+write-host("Get the length of array")
+$myList.Length
+
+write-host("Get Second element of array")
+$myList[1]
+
+write-host("Get partial array")
+$subList = $myList[1..3]
+
+write-host("print subList")
+$subList
+
+write-host("using for loop")
+for ($i = 0; $i -le ($myList.length - 1); $i += 1) {
+  $myList[$i]
+}
+
+write-host("using forEach Loop")
+foreach ($element in $myList) {
+  $element
+}
+
+write-host("using while Loop")
+$i = 0
+while($i -lt 4) {
+  $myList[$i];
+  $i++
+}
+
+write-host("Assign values")
+$myList[1] = 10
+$myList
+
+
+
+-------- Hashmap/hashtable --------
+
+$hash = @{ID = 1; Shape = "Square"; Color = "Blue"}
+or
+$hash = @{}
+
+write-host("Print all hashtable keys-values in tabular format with Name and Value columns")
+$hash
+
+Name                           Value
+----                           -----
+Color                          Blue
+Shape                          Square
+ID  						   1
+
+
+write-host("Print all hashtable keys")
+$hash.keys
+
+write-host("Print all hashtable values")
+$hash.values
+
+write-host("Get ID")
+$hash["ID"] 
+or
+$hash.ID
+
+write-host("Get Shape")
+$hash.Shape
+
+write-host("print Size")
+$hash.Count
+
+write-host("Add key-value")
+$hash.Add("Created","Now")
+
+write-host("Remove key-value")
+$hash.Remove("ID")
+
+write-host("sort by key")
+$hash.GetEnumerator() | Sort-Object -Property key
+
+
+
+------ PowerShell objects ------
+
+** Here values won't store is Name and Value pair only, can have multiple columns and can be used in better way 
+
+$myObject = [PSCustomObject]@{
+    Name     = 'Kevin'
+    Language = 'PowerShell'
+    State    = 'Texas'
+}
+
+$myObject							#will display whole custom-object
+
+Name  Language   State
+----  --------   -----
+Kevin PowerShell Texas
+
+$myObject.Name						#will give value for the Key
+
+
+$myObject | Add-Member -MemberType NoteProperty -Name 'ID' -Value 'KevinMarquette'
+$myObject.ID
+
+$myObject.psobject.properties.remove('ID')
+$myObject
+
+
+
+------ Where-Object -----
+
+** Where-Object cmdlet can be used to select objects having particular property values from the collection of objects that are passed to it.
+
+Get-Service | Where-Object {$_.Status -eq "Stopped"}
+Get-Process | Where-Object {$_.ProcessName -Match "^p.*"}					#process name starting with p
+Get-Process | Where-Object {$_.ProcessName -noMatch "^d.*"}
+Get-Service | Where-Object {$_.Status -eq "Stopped"} | Where-Object {$_.Name -Match "^A.*"}
+
+
+----- ForEach-Object ------
+
+** ForEach-Object cmdlet can be used to perform operations on each object of a collection of objects.
+
+1000,2000,3000 | ForEach-Object -Process {$_/1000}
+"Microsoft.PowerShell.Core", "Microsoft.PowerShell.Host" | ForEach-Object {$_.Split(".")}
+Get-Service | Where-Object {$_.Status -eq "Stopped"} | ForEach-Object {$_.Name -replace 'A','B'}
+
+
+----- Select-Object ------
+
+Get-Process | Select-Object -Property ProcessName, Id, WS -Last 5
+"a","b","c","a","a","a" | Select-Object -Unique
+
+
+----- Sort-Object ------
+
+Get-Process | Sort-Object -Property WS | Select-Object -Last 5
+"d","e","c","a","b","f" | Sort-Object
+
+
+-------- Functions ---------
+
+Function Test {
+	param (
+    [string] $Param1,
+	[Parameter(Mandatory = $true)]
+    [string] $Param2
+	)
+	
+	if ($Param1 -eq "") {
+		Write-Output "Param1 is Null"
+	} else {
+		Write-Output $Param1
+	}
+	Write-Output "----------"
+	Write-Output $Param2
+}
+
+Test
+Test "P1" "P2"

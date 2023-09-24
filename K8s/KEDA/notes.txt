@@ -1,0 +1,16 @@
+--- create container image and push to ACR ---
+
+az acr build --image agentimage2022azcli:v3.5 --registry glbldvazdoagentpoolacr --file Dockerfile . --platform windows
+
+v3.3  --  sanjay (copy deleteAgentByName.ps1/start.ps1/start-deleteAgents.ps1 to container)
+# start-deleteAgents.ps1 will delete the offline agents (if any) then create and register the agent at startup.
+# deleteAgentByName.ps1 will execute at preStop to delete the agent (online, using pod name) before pod dies.
+
+
+v3.4  --  sanjay (same as 3.3 just need to run agent for 1 job i.e. run.cmd --once in start-deleteAgents.ps1 file)
+# This will be used only for for KEDA ScaledJob
+# since agent is running for one job only, it will remove the agent from pool also after that (finally block will get executed)
+
+
+v3.5  --  sanjay (it is for KEDA, only start.ps1 required with .\run.cmd --once so that no cleaning happens of offline agents in agent pool) 
+# dockerfile will run start.ps1 at run time (CMD ["powershell.exe", "-File", "start.ps1"])

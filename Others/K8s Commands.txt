@@ -1,0 +1,364 @@
+kubectl config get-contexts                         # display list of contexts
+kubectl config current-context                      # display the current-context
+kubectl config use-context my-cluster-name          # set the default context to my-cluster-name
+kubectl config set-cluster my-cluster-name          # set a cluster entry in the kubeconfig
+
+kubectl get nodes									#no namespace for nodes
+kubectl describe nodes my-node 
+
+kubectl create deployment nginx --image=nginx  		# start a single instance of nginx
+Kubectl apply -f deployment.yml -n=namespace
+Kubectl delete deployment deployment_name -n=namespace
+
+kubectl create deployment nginx --image=nginx  		#start a single instance of nginx
+kubectl delete pod nginx
+
+kubectl run nginx --image=nginx						#Create a new pod with the nginx image.
+
+kubectl get pods -o wide -n=namespace				#to get pod detals including node where they are scheduled
+
+kubectl describe pods my-pod -n=namespace			#to get the pod desription like image etc.
+
+kubectl logs my-pod -n=namespace
+
+kubectl exec -it my-pod -n=namespace -- cmd/(powershell)/(bin/bash) 
+
+kubectl run redis --image=redis123 --dry-run=client -o yaml							#to get the yaml definition of pods
+kubectl run redis --image=redis123 --dry-run=client -o yaml > redis.yaml			#to store the yaml definition in yaml file
+kubectl apply -f redis.yaml
+
+ReplicaSet vs ReplicationController: RS requires a selector definition
+
+kubectl edit replicaset <rsname>													#to edit the replicaset
+
+kubectl scale replicaset new-replica-set --replicas=5
+
+Deployment creates the replicaset in the backend
+
+kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3
+
+
+
+-------------------------
+
+Create an NGINX Pod: kubectl run nginx --image=nginx
+
+Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run): kubectl run nginx --image=nginx --dry-run=client -o yaml
+
+Create a deployment: kubectl create deployment --image=nginx nginx
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run): kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run) with 4 Replicas (--replicas=4): kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > nginx-deployment.yaml
+
+Save it to a file, make necessary changes to the file (for example, adding more replicas) and then create the deployment: kubectl create -f nginx-deployment.yaml
+
+
+
+-------- Impretive vs declarative ----------
+
+** All single line commands to create pods, deployments etc are imperative commands.
+** All other manifest files are declarative way of working
+
+
+** Create a service redis-service to expose the redis application within the cluster on port 6379. Use imperative commands.
+kubectl expose pod redis --port=6379 --name=redis-service	
+
+** Create a deployment named webapp using the image kodekloud/webapp-color with 3 replicas.
+kubectl create deployment webapp --image=kodekloud/webapp-color --replicas=3
+
+
+----- selector & labels -----
+
+kubectl get pods --selector env=dev			#labels defined at template section for pods
+
+kubectl get all --selector env=prod
+kubectl get all --selector env=prod --no-headers
+
+kubectl get pods --selector bu=finance,env=prod,tier=frontend
+
+
+----- Taint & Tolerations -----
+
+kubectl taint node node01 spray=mortein:NoSchedule
+
+kubectl run bee --image=nginx --dry-run=client -o yaml > bee.yaml
+edit and add toleration part and deploy the pod 
+
+kubectl describe node node01 | grep Taint
+
+
+----- Ingress ------
+
+Kubectl get Deployments/pods/Ingress -A						#will give resources in all namespaces
+
+kubectl edit ingress ingress-wear-watch -n=app-space		#to edit the ingress deployment file
+
+kubectl create ingress ingress-pay -n critical-space --rule="/pay=pay-service:8282"
+
+
+kubectl create namespace ingress-space
+kubectl create configmap nginx-configuration -n=ingress-space
+kubectl create serviceaccount ingress-serviceaccount -n=ingress-space
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-controller
+  namespace: ingress-space
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: nginx-ingress
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress
+    spec:
+      serviceAccountName: ingress-serviceaccount
+      containers:
+        - name: nginx-ingress-controller
+          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.21.0
+          args:
+            - /nginx-ingress-controller
+            - --configmap=$(POD_NAMESPACE)/nginx-configuration
+            - --default-backend-service=app-space/default-http-backend
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+			  
+			  
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress
+  namespace: ingress-space
+spec:
+  type: NodePort
+  ports:
+    - targetPort: 80
+      port: 80
+      nodePort: 30080
+  selector:
+    name: nginx-ingress
+	
+	
+kubectl create ingress ingress-wear-watch -n app-space --rule="/wear=wear-service:8080" --rule="/watch=video-service:8080"
+
+kubectl edit ingress ingress-wear-watch -n app-space
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  creationTimestamp: "2023-01-03T06:40:54Z"
+  generation: 1
+  name: ingress-wear-watch
+  namespace: app-space
+  resourceVersion: "16060"
+  uid: bda0c799-2358-42b1-834b-561847bc3b6c
+  annotations:																#Added for right service redirection
+	nginx.ingress.kubernetes.io/rewrite-target: /
+	nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: wear-service
+            port:
+              number: 8080
+        path: /wear
+        pathType: Exact
+      - backend:
+          service:
+            name: video-service
+            port:
+              number: 8080
+        path: /watch
+        pathType: Exact
+status:
+  loadBalancer:
+    ingress:
+    - {}
+	
+	
+	
+------ Application Lifecycle Management --------
+
+** Rollout strategies:  RollingUpdates (Few pods will be destroyed and created new and then remianing will be destroyed and recreated)
+						Recreate (All pods are deleetd first and then new created)
+						
+Create: Kubectl create -f deployment.yaml
+
+Get: Kubectl get deployments
+
+Update: Kubectl apply -f deployment.yaml
+		Kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+		
+Status: Kubectl rollout status deployment/myapp-deployment
+		kubectl rollout history deployment/myapp-deployment
+		
+Rollback: Kubectl rollout undo deployment/myapp-deployment
+
+
+
+------ Commands for k8s pods/deployments --------
+
+** Create a pod with the ubuntu image to run a container to sleep for 5000 seconds. Modify the file ubuntu-sleeper-2.yaml
+
+apiVersion: v1
+kind: Pod 
+metadata:
+  name: ubuntu-sleeper-2
+spec:
+  containers:
+  - name: ubuntu
+    image: ubuntu
+    command: [ "sleep", "5000"]
+    #OR
+	#command:
+	#- "sleep"
+	#- "5000"
+	#OR
+	#command: [ "sleep" ]
+	#args" [ "5000" ]
+	
+	
+	
+	
+FROM python:3.6-alpine
+RUN pip install flask
+COPY . /opt/
+EXPOSE 8080
+WORKDIR /opt
+ENTRYPOINT ["python", "app.py"]
+CMD ["--color", "red"]						#at container runtime, "python app.py --color red" command will run
+
+
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: webapp-green
+  labels:
+      name: webapp-green 
+spec:
+  containers:
+  - name: simple-webapp
+    image: kodekloud/webapp-color
+    command: ["--color","green"]			#at container runtime, "--color green" command will run bcz command overwrites ENTRYPOINT
+	
+
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: webapp-green
+  labels:
+      name: webapp-green 
+spec:
+  containers:
+  - name: simple-webapp
+    image: kodekloud/webapp-color
+	command: ["python", "app.py"]
+    args: ["--color","green"]			#at container runtime, "python app.py --color green" command will run
+											bcz command overwrites ENTRYPOINT and args overwrites CMD
+											
+											
+kubectl run webapp-green --image=kodekloud/webapp-color -- --color=green #arg2 #arg3			#to pass only args
+
+kubectl run webapp-green --image=kodekloud/webapp-color --command -- <cmd> arg1 arg2  
+
+kubectl run webapp-color1 --image=webapp-color --env="APP_COLOR=green" 
+
+
+
+-------- Configmaps & Secrets ---------
+
+** Configmaps are used to store key-value pair data & Secrets are used to store sensitive data
+
+kubectl create configmap webapp-config-map --from-literal=APP_COLOR=darkblue
+
+kubectl replace --force -f /tmp/kubectl-edit-3517603394.yaml			#delete and deploy the pod again
+
+
+kubectl create secret generic db-secrte --from-literal=DB_Host=sql01 --from-literal=DB_User=root --from-literal=DB_Password=password123
+
+** Secret data is encoded not encrypted, anyone having access to it can decode it and see the actual value.
+
+kubectl get secret my-secret -o yaml		#will give the encoded values of secrets
+echo "encoded-value" | base64 --decode		#will give the secret value
+
+
+
+-------- MultiContainer Pod --------
+	
+kubectl run yellow --image=busybox --dry-run=client -o yaml >yelloww.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: yellow
+  name: yellow
+spec:
+  containers:
+  - image: busybox
+    name: lemon
+    command: [ "sleep", "1000" ]
+  - image: redis
+    name: gold
+    # resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+
+--- sidecar Container
+
+** when we deploy another container along main container, it's called Sidecar container.
+	ex: storing logs of an app to another platform (logging container)
+	
+kubectl logs kibana -n=elastic-stack										#to show the logs of a pod named kibana
+
+kubectl exec -it app -- cat /logs/app.log -n=elastic-stack					#to see the logs by going into pod
+
+
+--- Init Container
+
+** For example a process that pulls a code or binary from a repository that will be used by the main web application. That is a task that will be run only  one time when the pod is first created. Or a process that waits  for an external service or database to be up before the actual application starts. That's where initContainers comes in.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox
+    command: ['sh', '-c', 'git clone <some-repository-that-will-be-used-by-application> ; done;']
+	
+** In case init container is doing a sleep activity, it will add time in case of multiple init containers
+
+
+	
+	

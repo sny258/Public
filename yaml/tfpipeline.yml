@@ -1,0 +1,101 @@
+trigger: none
+
+variables:
+  - group: tfdev
+
+stages:
+ - stage: Build
+   displayName: Build
+   jobs:
+    - job: Terraform_Build
+      pool:
+        name: Default
+      steps:
+      - task: DownloadSecureFile@1
+        displayName: 'Download certificate file'
+        inputs:
+          secureFile: spncert.pfx
+      - task: CopyFiles@2
+        displayName: 'Copying certificate to working directory'
+        inputs:
+          SourceFolder: '$(Agent.TempDirectory)'
+          Contents: spncert.pfx
+          TargetFolder: '$(Build.SourcesDirectory)'
+      - task: PowerShell@2
+        displayName: 'Terraform init'
+        env:
+          ARM_ACCESS_KEY: $(access_key)
+          #ARM_SAS_TOKEN: $(sas_token)
+        inputs:
+          targetType: 'inline'
+          script: |
+            $subscription=(((get-content mssql.auto.tfvars | select-string "subscription_name").tostring()).split("=")[1]).replace('"','')
+            $rgname=(((get-content mssql.auto.tfvars | select-string "resource_group_name").tostring()).split("=")[1]).replace('"','')
+            $resouce=(((get-content mssql.auto.tfvars | select-string "sql_name").tostring()).split("=")[1]).replace('"','')
+            $statefile =  "$subscription"+"_"+"$rgname"+"_"+"$resouce"+".tfstate"
+            write-host $statefile
+            terraform init -backend-config="key=$statefile"
+          #failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/xxxx'
+      - task: PowerShell@2
+        displayName: 'Terraform validate'
+        env:
+          ARM_ACCESS_KEY: $(access_key)
+          #TF_LOG: 'TRACE'
+          #TF_LOG_PATH: 'terraformvalidate.txt'
+          #GIT_REDIRECT_STDERR: '2>&1'
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform validate
+          workingDirectory: '$(Build.SourcesDirectory)/xxxx'
+      - task: PowerShell@2
+        displayName: 'Terraform plan'
+        env:
+          ARM_ACCESS_KEY: $(access_key)
+          ARM_SUBSCRIPTION_ID: $(subscription_id)
+          ARM_TENANT_ID: $(tenant_id)
+          ARM_CLIENT_ID: $(client_id)
+          ARM_CLIENT_CERTIFICATE_PATH: "$(Build.SourcesDirectory)/spncert.pfx"
+          ARM_CLIENT_CERTIFICATE_PASSWORD: $(client_certificate_password)
+          #TF_LOG: 'TRACE'
+          #TF_LOG_PATH: 'terraformplan.txt'
+          #GIT_REDIRECT_STDERR: '2>&1'
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform plan 
+          #failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/xxxx'
+
+ - stage: Deploy
+   displayName: Deploy
+   jobs:
+    - job: Terraform_Deploy
+      pool:
+        name: Default
+      steps:
+      - checkout: none                      # will use the same working directory as Build stage
+      - task: PowerShell@2
+        displayName: 'Terraform apply'
+        env:
+          ARM_ACCESS_KEY: $(access_key)
+          ARM_SUBSCRIPTION_ID: $(subscription_id)
+          ARM_TENANT_ID: $(tenant_id)
+          ARM_CLIENT_ID: $(client_id)
+          ARM_CLIENT_CERTIFICATE_PATH: "$(Build.SourcesDirectory)/spncert.pfx"
+          ARM_CLIENT_CERTIFICATE_PASSWORD: $(client_certificate_password)
+          #TF_LOG: 'TRACE'
+          #TF_LOG_PATH: 'terraformapply.txt'
+          #GIT_REDIRECT_STDERR: '2>&1'
+        inputs:
+          targetType: 'inline'
+          script: |
+            terraform apply -auto-approve
+          #failOnStderr: true
+          workingDirectory: '$(Build.SourcesDirectory)/xxxx'
+      - task: DeleteFiles@1
+        displayName: 'Delete certificate file'
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: 'spncert.pfx'

@@ -1,0 +1,35 @@
+$MasterUserMod = "$(MasterUser)" -replace "%", "%%"
+$MasterPassMod = "$(MasterPass)" -replace "%", "%%"
+$UiPathUsernameMod = "$(UiPathUsername)" -replace "%", "%%"
+$UiPathPasswordMod = "$(UiPathPassword)" -replace "%", "%%"
+$PDBUsernameMod = "$(PDBUsername)" -replace "%", "%%"
+$PDBPasswordMod = "$(PDBPassword)" -replace "%", "%%"
+$RobotUsername1Mod = "$(RobotUsername1)" -replace "%", "%%"
+$RobotUsername2Mod = "$(RobotUsername2)" -replace "%", "%%"
+$RobotUsername3Mod = "$(RobotUsername3)" -replace "%", "%%"
+$RobotUsername4Mod = "$(RobotUsername4)" -replace "%", "%%"
+$RobotUsername5Mod = "$(RobotUsername5)" -replace "%", "%%"
+$USDFTEPDAPP22BTSVCMod = "$(USDFTEPDAPP22BTSVC)" -replace "%", "%%"
+$USDFTEPDAPP23BTSVCMod = "$(USDFTEPDAPP23BTSVC)" -replace "%", "%%"
+$USDFTEPDAPP24BTSVCMod = "$(USDFTEPDAPP24BTSVC)" -replace "%", "%%"
+$USDFTEPDAPP25BTSVCMod = "$(USDFTEPDAPP25BTSVC)" -replace "%", "%%"
+$USDFTEPDAPP26BTSVCMod = "$(USDFTEPDAPP26BTSVC)" -replace "%", "%%"
+
+
+$Header = @{
+        "authorization" = "Basic $(AzureDevOpsToken)"
+    }
+    $bodytxt = @"
+    {"variables": {"ApexDBAuth": {"value": "$(ApexDBAuthQA)","isSecret": true},"DBConString": {"value": "$(DBConStringQA)","isSecret": true},"MasterPass": {"value": "$MasterPassMod","isSecret": true},"MasterUser": {"value": "$MasterUserMod","isSecret": true},"UiPathPassword": {"value": "$UiPathPasswordMod","isSecret": true},"PDBPassword": {"value": "$PDBPasswordMod","isSecret": true},"PDBUsername": {"value": "$PDBUsernameMod","isSecret": true},"ProjectAPI": {"value": "$(ProjectAPIQA)"},"Tenacy": {"value": "$(Tenacy)","isSecret": true},"UserAPI": {"value": "$(UserAPIQA)"},"UiPathUsername": {"value": "$UiPathUsernameMod","isSecret": true},"UiPathAuthenticationAPI": {"value": "$(UiPathAuthenticationAPI)"},"UiPathURI": {"value": "$(UiPathURI)"},"AzureDevOpsToken": {"value": "$(AzureDevOpsToken)","isSecret": true},"UiPathEnv": {"value": "$(UiPathEnv)"},"ApexDBAuthAPI": {"value": "$(ApexDBAuthAPIQA)"},"UiPathMachine": {"value": "$(UiPathMachine)"},"DBConStringGOLD": {"value": "$(DBConStringGOLD)","isSecret": true},"DBConIP": {"value": "$(DBConIP)","isSecret": true},"DBConServiceName": {"value": "$(DBConServiceName)","isSecret": true},"NodePathAgent": {"value": "$(NodePathAgent)"},"npmPath": {"value": "$(npmPath)"},"AngularPathAgent": {"value": "$(AngularPathAgent)"},"UserOffboardAPI": {"value": "$(UserOffboardAPIQA)"},"ProjectOffboardAPI": {"value": "$(ProjectOffboardAPIQA)"},"UiPathDFTEs": {"value": "$(UiPathDFTEs)"},"RobotUsername1": {"value": "$RobotUsername1Mod","isSecret": true},"RobotUsername2": {"value": "$RobotUsername2Mod","isSecret": true},"RobotUsername3": {"value": "$RobotUsername3Mod","isSecret": true},"RobotUsername4": {"value": "$RobotUsername4Mod","isSecret": true},"RobotUsername5": {"value": "$RobotUsername5Mod","isSecret": true},"USDFTEPDAPP22BTSVC": {"value": "$USDFTEPDAPP22BTSVCMod","isSecret": true},"USDFTEPDAPP23BTSVC": {"value": "$USDFTEPDAPP23BTSVCMod","isSecret": true},"USDFTEPDAPP24BTSVC": {"value": "$USDFTEPDAPP24BTSVCMod","isSecret": true},"USDFTEPDAPP25BTSVC": {"value": "$USDFTEPDAPP25BTSVCMod","isSecret": true},"USDFTEPDAPP26BTSVC": {"value": "$USDFTEPDAPP26BTSVCMod","isSecret": true}},"type": "Vsts","name": "KeyVaultSecrets","description": "KeyVaultSecrets"}
+"@
+
+$bodyjson = $bodytxt
+    #send the mail through Sendgrid
+    $Parameters = @{
+        Method      = "PUT"
+        Uri         = "https://dev.azure.com/xxxx-xxxx-DFTE/DFTE/_apis/distributedtask/variablegroups/7?api-version=5.0-preview.1"
+        Headers     = $Header
+        ContentType = "application/json"
+        Body        = $BodyJson
+    }
+    Invoke-RestMethod @Parameters

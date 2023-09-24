@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: PersistentVolume            #PVs are created on cluseter level, not on namespace level
+metadata:
+  name: aks-volume
+  labels:
+    type: local
+spec:
+  #we use local node storage here!
+  #kubectl get storageclass
+  #storageClassName: aks-storageclass              #either create new or use default    
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:                               #local is also an option
+    path: C:\Users\ntadmin\AzDOagent    
+    type: DirectoryOrCreate
+  nodeAffinity:                            #to create PV on specific node in case of multinode pool
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - aksws2022000000
+          - aksws2022000001
+
+
+# kubectl apply -f aks_pv.yml
+# kubectl get pv -n <namespace>

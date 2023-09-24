@@ -1,0 +1,129 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - packages/*.psd1
+
+pool:
+  name: NestleAMS
+
+stages:
+-  stage: stage1
+   displayName: stage1
+   jobs:
+   - job: Nuget
+     pool:
+       name: NestleAMS
+     steps: 
+     - checkout: self
+       persistCredentials: true
+       clean: true
+
+    #  - task: DeleteFiles@1
+    #    displayName: clean up artifacts target directory
+    #    inputs:
+    #      SourceFolder: $(Pipeline.Workspace)
+    #      contents: |
+    #        **
+
+     - task: NuGetToolInstaller@1
+       displayName: 'Use NuGet '
+       
+     - task: powershell@2
+       displayName: 'Checking for file updates'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $files = git show --pretty="" --name-only | where-object {$_ -like '*/*.ps?1'} | split-path | Select-Object -Unique | split-path -Leaf
+           write-output $files
+           write-output "##vso[task.setvariable variable=packagename]$files"
+         workingDirectory: '$(Build.SourcesDirectory)'
+
+     - task: powershell@2
+       displayName: 'Nuget Spec file creation'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $files = git show --pretty="" --name-only | where-object {$_ -like '*/*.ps?1'} | split-path | Select-Object -Unique | split-path -Leaf
+           write-output $files
+           foreach ($packagename in $files) {
+             write-host $packagename
+             cd $packagename
+             nuget spec $packagename -Force
+             cd ..
+             } 
+         workingDirectory: '$(Build.SourcesDirectory)/packages'
+
+     - task: powershell@2
+       displayName: 'updating latest version in .nuspec file'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $files = git show --pretty="" --name-only | where-object {$_ -like '*/*.ps?1'} | split-path | Select-Object -Unique | split-path -Leaf
+           write-output $files
+           foreach ($packagename in $files) {
+             write-host $packagename
+             cd $packagename
+             $manifest = Import-PowerShellDataFile "$packagename.psd1"
+             $version1 = echo $manifest.ModuleVersion
+             echo $version1
+             $filePathToTask = "$(Build.SourcesDirectory)/packages/$packagename/$packagename.nuspec"
+             $xml = New-Object XML
+             $xml.Load($filePathToTask)
+             $element = $xml.SelectSingleNode("//version")
+             $element.InnerText = $version1
+             $element1 = $xml.SelectSingleNode("//dependencies")
+             $element1.InnerText = ""
+             $xml.Save($filePathToTask)
+             cd ..
+             }
+         workingDirectory: '$(Build.SourcesDirectory)/packages'
+  
+     - task: powershell@2
+       displayName: 'Nuget Pack'
+       inputs:
+         targetType: 'inline'
+         script: |
+           $files = git show --pretty="" --name-only | where-object {$_ -like '*/*.ps?1'} | split-path | Select-Object -Unique | split-path -Leaf
+           write-output $files
+           foreach ($packagename in $files) {
+             write-host $packagename
+             cd $packagename
+             nuget pack $packagename.nuspec 
+             cd ..
+             }
+         workingDirectory: '$(Build.SourcesDirectory)/packages'
+
+     - task: NuGetCommand@2
+       displayName: 'NuGet push'
+       inputs:
+         command: push
+         packagesToPush: '**/*.nupkg'
+         publishVstsFeed: 'ee5c80ee-217a-4df0-aaa2-d0977445e3ea/fb8af36f-8f91-45f7-bed2-0c4c299bf8b3'   #feed_id
+         allowPackageConflicts: true
+
+
+     - task: PowerShell@2  
+       displayName: Check-in Repo
+      #  env:
+      #      SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+       inputs:
+          targetType: 'inline'
+          script: |
+            git branch
+            git checkout main
+            git branch
+            git pull
+            git add *.nuspec
+            git commit -m "files added from pipeline $($env:BUILD_DEFINITIONNAME) build number $($env:BUILD_BUILDNUMBER)"
+            git push origin HEAD:main 
+          workingDirectory: '$(Build.SourcesDirectory)'
+

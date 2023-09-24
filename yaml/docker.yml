@@ -1,0 +1,74 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+pool:
+  #name: Azure Pipelines 
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: Docker
+  - name: imageRepository
+    value: sanju/demo-app
+  - name: containerRegistry
+    value: sanju333/demo-app            # appregistry60001.azurecr.io/demo-app
+  - name: dockerfilePath
+    value: '$(Build.SourcesDirectory)/Dockerfile'
+  - name: tag
+    value: $(Build.BuildId)
+  
+
+stages:
+- stage: Docker
+  displayName: Docker
+  jobs:
+  - job: docker_build_push
+    pool:
+      vmImage: 'ubuntu-latest' 
+    steps:
+
+    # - task: Docker@2
+    #   displayName: docker_build_push
+    #   inputs:
+    #     containerRegistry: 'Docker Hub'
+    #     repository: 'sanju333/demo-aap'
+    #     command: 'buildAndPush'
+    #     Dockerfile: 'Dockerfile'
+    #     tags: '$(Build.Buildid)'
+      
+    - task: PowerShell@2
+      displayName: Build
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker build -t $(imageRepository):$(Build.BuildId) .
+        workingDirectory: '$(Build.SourcesDirectory)'
+      
+    - task: PowerShell@2
+      displayName: Tag
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker tag $(imageRepository):$(Build.BuildId) $(containerRegistry):$(Build.BuildId)
+        workingDirectory: '$(Build.SourcesDirectory)'
+    
+    - task: PowerShell@2
+      displayName: Log-in                   # for ACR password will be Access key
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker login -u $(username) -p $(password)
+        workingDirectory: '$(Build.SourcesDirectory)'
+
+    - task: PowerShell@2
+      displayName: Push
+      inputs:
+        targetType: 'inline'
+        script: |
+          docker push $(containerRegistry):$(Build.BuildId)
+        workingDirectory: '$(Build.SourcesDirectory)'
+      

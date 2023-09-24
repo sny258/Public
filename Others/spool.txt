@@ -1,0 +1,7 @@
+set pagesize 0
+set term off
+set feed off
+SET TRIMSPOOL ON
+spool 'DFTE_Projects.txt' 
+select 'PRJ'||a.project_id as Project from DFTE_PLATFORM_HOME_APPS.dfte_project_application_details a, DFTE_PLATFORM_HOME_APPS.dfte_common_lookup b where a.app_id=b.lookup_id and b.lookup_name='DCON';
+spool off

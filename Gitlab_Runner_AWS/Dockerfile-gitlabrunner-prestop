@@ -1,0 +1,40 @@
+FROM gitlab/gitlab-runner:latest
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+    apt-transport-https \
+    apt-utils \
+    ca-certificates \
+    curl \
+    git \
+	python3 \
+	python3-pip \
+	awscli \
+	gnupg2 \
+	openssl \
+	vim \
+    iputils-ping \
+    jq \
+    lsb-release \
+    software-properties-common
+
+COPY ./start-prestop.sh .
+RUN chmod +x start-prestop.sh
+
+ENTRYPOINT [ "./start-prestop.sh" ]
+	
+
+
+###########################################
+	
+#docker build -t gitlab/gitlab-runner-prestop:v1 -f Dockerfile-gitlabrunner-prestop .
+
+#docker run -d --name gitlab-runner -e GITLAB_URL="https://sourcery-test.assaabloy.net" -e REGISTRATION_TOKEN="GR1348941Zgsmxxxxxxxxxxx" -e RUNNER_DESCRIPTION="runnerthroughscript" -e RUNNER_TAGS="Docker,Script" -e RUNNER_EXECUTOR="docker" -v /var/run/docker.sock:/var/run/docker.sock gitlab/gitlab-runner-prestop:v1
+
+#docker exec -it gitlab-runner sh
+
+#docker rm -f gitlab-runner
+
+#cat /etc/gitlab-runner/config.toml

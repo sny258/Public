@@ -1,0 +1,51 @@
+-------- Questions -----------
+
+$changes_ps = git status -s | where-object {$_ -notmatch "^D .*"} | foreach-object{($_.substring(3))} | foreach-object{($_ -split '-> ')[-1]} | foreach-object{$_ -replace '"',''} | where-object {$_ -like "*.ps1" -or $_ -like "*.psm1"}
+
+** Drawback of ACR  -->  won't be able to test the container image locally
+
+** what are kubernetes services ?  -->  There are four types of Kubernetes services — ClusterIP , NodePort , LoadBalancer and ExternalName . 
+
+** configmap vs secrets  -->  Both ConfigMaps and secrets store the data the same way, with key/value pairs, but ConfigMaps are meant for plain text data, and secrets are meant for data that you don't want anything or anyone to know about except the application
+
+** terraform maps vs objects  -->  object(...): a collection of named attributes that each have their own type.
+							       map(...): a collection of values where each is identified by a string label.
+								   
+** terraform apply after statefile is deleted  -->  So if the state file gets lost, Terraform will think it never created those resources in the first place and will try to duplicate everything.
+
+** what if we add tag after tf apply from portal -->  at next plan, terraform will show 1 change and will try to delete the tag
+
+** to skip the resources in next terraform apply -->  use lifecycle "ignore changes"
+
+** how to call modules in tf
+module "resourcegroup" {
+  source         = "./modules/resourcegroup"
+  name           = var.name
+  location       = var.location
+}
+
+
+** when we import some resource, it will update the statefile.
+	but before apply we need to add the resource block for that imported resource
+	and we need to make sure that after adding the resource block for imported resource, terraform plan show no changes to that imported resource.
+
+
+** Continuous Delivery vs Continuous Deployment  -->  Continuous delivery is a partly manual process where developers can deploy any changes to customers by simply clicking a button, while continuous deployment emphasizes automating the entire the process.
+
+
+** How to trigger pipeline tasks on the basis of branch  -->  in trigger section of the pipeline mention all the branches (main, stage, release etc.).
+then in the condition block of the pipeline tasks, add the condition to check the branch from which pipeline triggered.
+
+variables:
+  isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+
+- stage: B
+  condition: eq(variables.isMain, 'true')
+  jobs:
+  - job: B1
+    steps:
+      - script: echo Hello Stage B!
+      - script: echo $(isMain)
+	  
+	  
+** how to change the string in settings file for app deployment on the basis of environment  -->  use the replace token task in pipeline

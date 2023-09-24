@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pythonapp-service
+spec:
+  type: NodePort
+  ports:
+    - targetPort: 5000      #Service Port (Mandatory)
+      port: 5000            #Pod/Container Port
+      nodePort: 30080       #Node Port
+  selector:
+    app: pythonapp
+  #ports:
+  #- protocol: TCP
+    #port: 80            #Service Port (Mandatory)
+    #targetPort: 80      #Pod/Container Port
+
+# Run minikube service aspapp-service to tunnel the service and access the App

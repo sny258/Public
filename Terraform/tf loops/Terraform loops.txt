@@ -1,0 +1,49 @@
+
+--- Count ---
+
+variable "user_names" {
+  description = "IAM usernames"
+  type        = list(string)
+  default     = ["user1", "user2", "user3"]
+}
+
+resource "aws_iam_user" "example" {
+  count = length(var.user_names)		#length of default list in user_name var (3)
+  name  = var.user_names[count.index]		#will create 3 users menetioned in list (index: 0,1,2)	
+}
+
+
+Downside of count: count is sensible for any changes in list order, this means that if for some reason order of the list is changed, terraform will force replacement of all resources of which the index in the list has changed.
+
+for example, if you add another user at start (user0), then terraform will create everything from scratch. It will delete the older resources and then recreate them again since indexing has been changed.
+
+If this would get applied in live environment on a real resources it would lead to downtime
+
+
+
+
+
+
+--- For_each ---
+
+It can only be used on set(string) or map(string) and uses the key of a map as an index of instances of created resource.
+
+The reason why for_each does not work on list(string) is because a list can contain duplicate values but if you are using set(string) or map(string) then it does not support duplicate values.
+
+variable "user_names" {
+  description = "IAM usernames"
+  type        = set(string)
+  default     = ["user1", "user2", "user3s"]
+} 
+
+resource "aws_iam_user" "example" {
+  for_each = var.user_names			#will fetch the var
+  name  = each.value				#will have the values from var, index will be 'each.key'
+}
+
+
+If you want to convert the list to map/set for already existing variaable, terraform can convert a type with help of toset function.
+
+for_each = toset(var.user_names)		#in this case key and value will remain same, since var is list
+
+Now if you add new value to the variable, then terraform will create the new resource only without deletting and re-creating the existing resources.

@@ -1,0 +1,9 @@
+﻿sql_name="glbl-dv-sqlserver28-euwe-sqs"
+db_name=["glbl-dv-db01-euwe-sqd","glbl-dv-db02-euwe-sqd","glbl-dv-db03-euwe-sqd","glbl-dv-db04-euwe-sqd","glbl-dv-db05-euwe-sqd"]
+location="westeurope"
+subscription_name="emna-dv-informationtechnology-001-sub"
+environment="Development"
+resource_group_name="glbl-dv-sql-paastest-rgp"
+data_max="40"
+capacity="4"  
+solution_name="test"                
