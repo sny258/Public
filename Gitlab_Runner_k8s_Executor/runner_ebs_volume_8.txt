@@ -1,0 +1,371 @@
+
+
+8 EBS volumes, 15 gb each
+--------------------------
+
+4 in 'eu-central-1a' and 4 in 'eu-central-1b'
+
+
+gwl-gitlab-runner-pv-a0			vol-0093d90ae9a0eb060
+gwl-gitlab-runner-pv-a1			vol-0ace6e92158f0a85c
+gwl-gitlab-runner-pv-a2			vol-05c24b57e91300919
+gwl-gitlab-runner-pv-a3			vol-002c760d37ade8971
+
+gwl-gitlab-runner-pv-b4			vol-06a6ed4f2e57ffc1c
+gwl-gitlab-runner-pv-b5			vol-0c8dbd54f06c1423f
+gwl-gitlab-runner-pv-b6			vol-0cb0a63d311b66bdc
+gwl-gitlab-runner-pv-b7			vol-02c1f376cb4c8bdc5
+
+
+
+*******************
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gwl-gp3-sc
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
+
+  
+kubectl apply -f gwl-gp3-sc.yaml
+kubectl delete sc gwl-gp3-sc
+
+
+
+*****************
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-a0
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-0093d90ae9a0eb060					#eu-central-1a
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1a
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-a1
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-0ace6e92158f0a85c					#eu-central-1a
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1a
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-a2
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-05c24b57e91300919					#eu-central-1a
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1a
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-a3
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-002c760d37ade8971					#eu-central-1a
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1a
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-b4
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-06a6ed4f2e57ffc1c				#eu-central-1b
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1b
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-b5
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-0c8dbd54f06c1423f				#eu-central-1b
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1b
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-b6
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-0cb0a63d311b66bdc				#eu-central-1b
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1b
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-gitlab-runner-pv-b7
+spec:
+  capacity:
+    storage: 15Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  awsElasticBlockStore:
+    volumeID: vol-02c1f376cb4c8bdc5				#eu-central-1b
+    fsType: ext4
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.ebs.csi.aws.com/zone
+            operator: In
+            values:
+              - eu-central-1b
+
+			  
+			  
+kubectl apply -f gwl-gitlab-runner-pv.yaml -n gwl-runner 
+kubectl delete -f gwl-gitlab-runner-pv.yaml -n gwl-runner 
+
+
+
+
+#########################
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-a0
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-1
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-a1
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-a2
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-3
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-a3
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-4
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-b4
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-5
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-b5
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-6
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-b6
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-gitlab-runner-pvc-7
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gwl-gp3-sc
+  volumeName: gwl-gitlab-runner-pv-b7
+  resources:
+    requests:
+      storage: 15Gi
+	  
+	  
+	  
+kubectl apply -f gwl-gitlab-runner-pvc.yaml -n gwl-runner 
+kubectl delete -f gwl-gitlab-runner-pvc.yaml -n gwl-runner 

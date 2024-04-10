@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: as-test
+  labels:
+    app: as-test
+spec:
+  replicas: 4                   #increase to 8 for auto scaling
+  selector:
+    matchLabels:
+      app: as-test
+  template:
+    metadata:
+      labels:
+        app: as-test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 4000m                         #reserved initially
+            memory: 512Mi                     #reserved initially
+          limits:
+            cpu: 6000m                        #max limit untill OOM error
+            memory: 1024Mi                     #max limit untill OOM error

@@ -1,0 +1,73 @@
+Pre-requisites: ebs csi driver
+
+
+****** Kubecost *********
+
+1. Install using helm chart
+---------------------------
+helm upgrade -i kubecost oci://public.ecr.aws/kubecost/cost-analyzer --version 2.0.2 \
+    --namespace kubecost --create-namespace \
+    -f https://raw.githubusercontent.com/kubecost/cost-analyzer-helm-chart/develop/cost-analyzer/values-eks-cost-monitoring.yaml
+
+2. verify installation (3 pods should be running)
+-----------------
+kubectl get pods -n kubecost
+
+3. Create LB service to access the portal
+-----------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubecost-cost-analyzer-lb
+  namespace: kubecost
+spec:
+  ports:
+    - port: 80
+      targetPort: 9090
+  selector:
+    app: cost-analyzer
+    app.kubernetes.io/instance: kubecost
+    app.kubernetes.io/name: cost-analyzer
+  type: LoadBalancer
+
+4. Remove kubecost
+----------------
+helm uninstall kubecost --namespace kubecost
+kubectl delete ns kubecost
+
+
+
+
+
+****** Opencost *********
+
+1. Install prometheus
+-------------
+helm install prometheus --repo https://prometheus-community.github.io/helm-charts prometheus \
+  --namespace prometheus-system --create-namespace \
+  --set prometheus-pushgateway.enabled=false \
+  --set alertmanager.enabled=false \
+  -f https://raw.githubusercontent.com/opencost/opencost/develop/kubernetes/prometheus/extraScrapeConfigs.yaml
+
+2. Install Opencost 
+------------
+kubectl apply --namespace opencost -f https://raw.githubusercontent.com/opencost/opencost/develop/kubernetes/opencost.yaml
+
+3. Create LB service to access the portal
+-----------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencost-cost-analyzer-lb
+  namespace: opencost
+spec:
+  ports:
+    - port: 80
+      targetPort: 9090
+  selector:
+    app: opencost
+  type: LoadBalancer
+
+4. Remove Opencost
+----------------
+kubectl delete -f https://raw.githubusercontent.com/opencost/opencost/develop/kubernetes/opencost.yaml

@@ -1,0 +1,29 @@
+------------ start mount ----------
+
+Create the EBS volumes from AWs portal
+
+Now attach the volumes to instances from AWS portal 
+    (Device name: /dev/xvdf)    -> postgresql
+    (Device name: /dev/xvdp)    -> minio
+    (Device name: /dev/sdg)     -> elasticsearch
+
+Now ssh into instance and use 'lsblk' to check if volumes are attached
+
+Then need to create the file system
+    mkfs -t ext4 /dev/xvdf
+    mkfs -t ext4 /dev/xvdp
+    mkfs -t ext4 /dev/sdg
+
+Now create the directories in the instance
+    mkdir /data/postgresql
+    mkdir /data/storage                 #for minio  
+    mkdir /data/elasticsearch     
+
+Then go to file '/etc/fstab' and add the below connect
+    /dev/sdg       /data/elasticsearch   xfs    defaults,nofail        0       0
+    /dev/xvdp       /data/storage   xfs    defaults,nofail        0       0
+    /dev/xvdf       /data/postgresql   xfs    defaults,nofail        0       0                
+    
+Now need to mount using 'mount -a' command
+
+crosscheck command 'df -h'

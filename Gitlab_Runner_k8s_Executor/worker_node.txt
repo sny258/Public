@@ -1,0 +1,40 @@
+******* tools on worker nodes *********
+--------------------------------------------
+awscli (already present), git (yum install git -y)
+
+
+kubectl 
+----------
+curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.29.0/2024-01-04/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
+echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
+kubectl version --client
+
+
+helm
+----
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > get_helm.sh
+chmod 700 get_helm.sh
+mkdir -p $HOME/bin && cp ./get_helm.sh $HOME/bin/get_helm.sh && export PATH=$PATH:/usr/local/bin
+./get_helm.sh
+echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
+helm version | cut -d + -f 1
+
+source ~/.bashrc
+
+
+
+Docker
+------
+sudo yum -y update
+sudo yum install -y git
+sudo amazon-linux-extras install -y docker
+sudo usermod -aG docker ec2-user
+#sudo service docker status
+#sudo service docker start
+sudo systemctl enable docker
+sudo reboot
+
+
+

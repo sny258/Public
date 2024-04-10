@@ -1,0 +1,68 @@
+image:
+  registry: registry.gitlab.com
+  image: gitlab-org/gitlab-runner
+
+useTini: false
+
+imagePullPolicy: IfNotPresent
+
+replicas: 1
+
+gitlabUrl: https://sourcery-test.assaabloy.net
+
+#runnerToken: "glrt-H2payYe14yDzyuJNrvoL"
+runnerRegistrationToken: "GR1348941ZgsmRxQ64nxPySzgy9uL"
+
+unregisterRunners: true
+
+terminationGracePeriodSeconds: 120
+
+concurrent: 5
+
+checkInterval: 10
+
+rbac:
+  create: true
+  rules: []
+
+runners:
+  config: |
+    [[runners]]
+      executor = "kubernetes"
+      #builds_dir = "/builds"
+      [runners.kubernetes]
+        namespace = "{{.Release.Namespace}}"
+        image = "alpine"
+        privileged = true
+        poll_interval = 5
+        poll_timeout = 3600
+        cpu_request = "500m"                    #Actual docker image which will run the stage, build
+        cpu_limit = "700"                      # 2 equal to 2000m & 0.5 equal to 500m
+        memory_request = "512Mi"
+        memory_limit = "1Gi"
+        service_cpu_request = "500m"
+        service_cpu_limit = "1"              #For service used with build container
+        service_memory_request = "512Mi"
+        service_memory_limit = "1Gi"
+        helper_cpu_limit = "100m"               #registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper, helper
+        helper_memory_limit = "100Mi"
+        #[[runners.kubernetes.volumes.pvc]]
+          #name = "gwl-gitlab-runner-pvc-$CI_CONCURRENT_ID"
+          #mount_path = "/builds"
+      [runners.cache]
+        Type = "s3"
+        Path = "runner-cache"
+        Shared = true
+        [runners.cache.s3]
+          ServerAddress = "s3.amazonaws.com"
+          BucketName = "terraform-statefile-gitlabrunner"
+          BucketLocation = "eu-west-1"
+          Insecure = false
+          AuthenticationType = "access-key"
+
+  tags: "Docker,Runner"
+
+  name: "runner-k8s-executor"
+
+  cache:
+    secretName: s3access

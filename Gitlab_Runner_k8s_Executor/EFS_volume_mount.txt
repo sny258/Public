@@ -1,0 +1,172 @@
+####################
+##########  Add EFS CSI driver to EKS cluster #########
+####################
+
+1. Get the 'OpenID Connect provider URL' of the EKS cluster
+
+2. Creata a new IAM role by using 'web identity'.  (Name: AmazonEKS_EFS_CSI_DriverRole)			gwl-gitlab-runner-efs-csi-role
+
+	identity provider: 	'OIDC identity provider used in 1st step'
+	Audience: 			sts.amazonaws.com
+	Policy: 			AmazonEFSCSIDriverPolicy
+	
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::111122223333:oidc-provider/oidc.eks.region-code.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringLike": {
+          "oidc.eks.region-code.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE:sub": "system:serviceaccount:kube-system:efs-csi-*",
+          "oidc.eks.region-code.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+
+3. Now go to the cluster and add the add-on from ui and choose the above created IAM role for it.
+
+4. create an EFS driver in AWS   --> name: gwl-gitlab-runner-efs-csi-volume (fs-0860c91f1dc8a339b)
+
+5. Now create a new SG (sg-0498439f6a793084b - gitlab-runner-efs-sg) and add inbound rule (allow port 2049 or NFS for VPC CIDR)
+	And then in the networking tab of EFS, add the subnets created above.
+
+6. After that open the EKS cluster's SG and add another inbound rule (type: ALL trafic and source: VPC CIDR)
+
+
+
+7. Now create the manifest for storage class. PV and PVC. Deploy to EKS cluster.
+
+*************
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: efs-sc-gwl-runner
+provisioner: efs.csi.aws.com
+parameters:
+  ### Change fs id ###
+  fileSystemId: fs-0860c91f1dc8a339b
+  directoryPerms: "700"
+  gidRangeStart: "1000" # optional
+  gidRangeEnd: "2000" # optional
+  basePath: "/dynamic_provisioning" # optional
+***************
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gwl-runner-shared-pv
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc-gwl-runner
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+    - rw
+    - lookupcache=pos
+    - noatime
+    - intr
+    - _netdev
+  csi:
+    driver: efs.csi.aws.com
+    ### Add efs id ###
+    volumeHandle: "fs-0860c91f1dc8a339b"
+***********************
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gwl-runner-shared-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc-gwl-runner
+  volumeMode: Filesystem
+  volumeName: gwl-runner-shared-pv
+  resources:
+    requests:
+      storage: 1Gi
+*************************
+
+kubectl apply -f gitlab-runner-sc.yaml -n gwl-runner
+kubectl apply -f gitlab-runner-pv.yaml -n gwl-runner
+kubectl apply -f gitlab-runner-pvc.yaml -n gwl-runner
+
+
+8. update the values.yaml for gitlab runner deployment.
+
+************************
+image:
+  registry: registry.gitlab.com
+  image: gitlab-org/gitlab-runner
+
+useTini: false
+
+imagePullPolicy: IfNotPresent
+
+replicas: 1
+
+gitlabUrl: https://sourcery-test.assaabloy.net
+
+#runnerToken: "glrt-H2payYe14xxxxxxxxxxxx"
+runnerRegistrationToken: "GR1348941Zgxxxxxxxxxxxx"
+
+unregisterRunners: true
+
+terminationGracePeriodSeconds: 120
+
+concurrent: 5
+
+checkInterval: 10
+
+rbac:
+  create: true
+  rules: []
+
+runners:  
+  config: |
+    [[runners]]
+      executor = "kubernetes"
+      builds_dir = "/mnt/builds"
+      [runners.kubernetes]
+        namespace = "{{.Release.Namespace}}"
+        image = "alpine"
+        privileged = true
+        poll_interval = 5
+        poll_timeout = 3600
+        [[runners.kubernetes.volumes.pvc]]
+          # CI_CONCURRENT_ID identifies parallel jobs of the same runner. "gwl-runner-shared-pvc-$CI_CONCURRENT_ID"
+          name = "gwl-runner-shared-pvc"
+          mount_path = "/mnt/builds"
+
+  tags: "Docker,Runner"
+
+  name: "runner-k8s-executor"
+**************************************
+
+
+9. mount EFS to node
+
+cd ~
+mkdir efs-runner
+#Any network IP of EFS
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 172.31.28.145:/ ~/efs-runner
+
+#AWS command (VPC should have DNS hostnames Enabled)
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport mount-target-DNS:/   ~/efs-mount-point  
+
+
+10. Deploy the runner
+
+helm install --namespace gwl-runner gitlab-runner -f values.yaml gitlab/gitlab-runner
+helm uninstall gitlab-runner -n gwl-runner
+
+
+kubectl exec -n gwl-runner -it gitlab-runner-84545b8549-js2tj -- /bin/bash
+cat /home/gitlab-runner/.gitlab-runner/config.toml
