@@ -1,0 +1,30 @@
+
+*** Requirement ***
+
+1. Need to run the terraform code on the EC2 instance (Runner is hosted on that EC2) via ci pipeline or manually. but instead of authenticating using the AWS configure or aws env variables, IAM role of EC2 instance should be used for terraform authentication to AWS account and deploy the resources.
+
+2. EC2 should be having the required IAM policies attached to the role so that permission sets can be managed by that role like creating, updating and deleting permission sets.
+
+
+
+*** steps ***
+
+1. Create an IAM role with required policies to manage permission sets and attach it to EC2 instance.
+
+2. After that in trust policies, add the ARN of the same role in principles. this is for assume role of server to allow access to actual IAM role.
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::407893465771:role/SSO_gitlab_runner_role",
+                "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+3. Now if terraform code is ran on the same EC2 instance without AWS configure or setting up aws env variables for auth, terraform will use the above IAM role.
