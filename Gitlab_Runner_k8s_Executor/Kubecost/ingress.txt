@@ -1,0 +1,146 @@
+
+****** Kubecost Ingress *******
+
+#use the existing kubecost service: kubecost-cost-analyzer
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubecost-cost-analyzer-ingress
+  namespace: kubecost
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/security-groups: sg-085ed924dcdaac13b                   # This subnet will be used and default won't be created
+    #alb.ingress.kubernetes.io/subnets: subnet-12345678,subnet-23456789               # Then no need to tag subnets
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kubecost-cost-analyzer
+                port:
+                  number: 9090
+  
+
+
+
+
+**** Steps ****
+
+
+1. The subnets needs to be tagged
+
+	a. kubernetes.io/cluster/gwl-gitlab-runner-eu-west-1-eks : shared
+
+	b. kubernetes.io/role/internal-elb : 1 or an empty tag 		(for internal load balancers)
+	c. kubernetes.io/role/elb : 1 or an empty tag  				(for internet-facing load balancers)
+
+2. Choose the scheme and target-type for ingress
+
+	a. if service type is clusterIP then use target type as 'ip'
+	b. If service type is NodePort then use target type as 'instance'
+
+	c. Internal LB can only be accessed within VPC (need private subnet), for users outside VPC use the internet-facing LB (need public subnet)
+
+3. These default SGs will be created if nothing mentioned in annotation
+  
+	a. k8s-kubecost-kubecost-67bd0bb74f						--> inbound allowed for all over port 80
+	b. k8s-traffic-gwlgitlabrunnereuwest1eks-2248ae8869		--> inbound blank
+
+4. After creation of ingress, a host name will be created (ALB DNS to access the service).
+
+
+
+
+######### with host #########
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubecost-cost-analyzer-ingress
+  namespace: kubecost
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/security-groups: sg-085ed924dcdaac13b  				# Replace with your own security group ID
+    #alb.ingress.kubernetes.io/subnets: subnet-12345678,subnet-23456789  			# Replace with your own subnet IDs
+spec:
+  rules:
+    - host: "eks.cost.monitoring.tools"										#LB DNS should be added in the route 53 as record
+	  http:
+        paths:
+          - path: "/kubecost"
+            pathType: Prefix
+            backend:
+              service:
+                name: kubecost-cost-analyzer
+                port:
+                  number: 9090
+				  
+				  
+
+
+######### Multiple paths with grouping #########
+
+** With help of group annotation, multiple ingress can be grouped into single ALB to save the cost.
+	Grouping can be done for services in different namespaces also/
+	
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubecost-cost-analyzer-ingress
+  namespace: kubecost
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/security-groups: sg-085ed924dcdaac13b                             # Replace with your own security group ID
+    #alb.ingress.kubernetes.io/subnets: subnet-12345678,subnet-23456789                         # Replace with your own subnet IDs
+    alb.ingress.kubernetes.io/group.name: cost-monitoring-group
+    #ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /kubecost
+            pathType: Prefix
+            backend:
+              service:
+                name: kubecost-cost-analyzer
+                port:
+                  number: 9090
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opencost-ingress
+  namespace: opencost
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/security-groups: sg-085ed924dcdaac13b                             # Replace with your own security group ID
+    #alb.ingress.kubernetes.io/subnets: subnet-12345678,subnet-23456789                         # Replace with your own subnet IDs
+    alb.ingress.kubernetes.io/group.name: cost-monitoring-group
+    #ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /opencost
+            pathType: Prefix
+            backend:
+              service:
+                name: opencost
+                port:
+                  number: 9090
