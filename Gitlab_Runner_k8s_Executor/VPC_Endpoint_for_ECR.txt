@@ -1,0 +1,45 @@
+
+**** VPC endpoint for ECR ******
+
+
+** For the servers which are in private subnets, NAT gateway is the option to connect to the internet.
+	Now if we are using private subnets in the EKS cluster and downloading the docker images from ECR (based on regions).
+	 In that case there will be cost associated with data transfer through NAT gateway (these ECR images will be coming from over the internet).
+	 
+** To overcome this additional cost issue, VPC endpoint for ECR can be created at VPC level. This way EKS nodes will access the ECR privately i.e. as part of VPC without going over internet.
+
+** The VPC should have DNS hostnames enabled.
+
+** VPC endpoints currently don't support Amazon ECR Public repositories.
+
+
+steps:
+-------
+
+1. Create VPC endpoint for ECR (two needs to be created)
+	
+	Service Name: com.amazonaws.eu-central-1.ecr.api & com.amazonaws.eu-central-1.ecr.dkr
+	Type: Interface
+	VPC: <vpc_name>
+	subnet: <select the AZ's your EKS is deployed on and then respective subnets>
+	Security Group: <Default subnet for VPC, but it should have 443 inboound allowed from VPC CIDR>
+	Policy: Full access (option avaialable for custom also)
+	Tags: Optional
+	
+2. Create VPC endpoint for s3
+	
+	Service Name: com.amazonaws.eu-central-1.s3
+	Type: Gateway
+	VPC: <vpc_name>
+	Route Table: <NAT gateway route table>
+	Policy: Full access (option avaialable for custom also)
+	Tags: Optional
+	
+3. 	For s3 endpoint, it will add another route in NAT gateway route table
+
+4. For the ECR endpoint, with help of nslookup it can be verified.
+
+	nslookup <0496xxxxx0064.dkr.ecr.eu-central-1.amazonaws.com>		-->  resolved IP should be private 
+
+5. Add policy to EKS node groups IAM role  --> AmazonECSTaskExecutionRolePolicy.
+	Not required for fargate profile, since it's already available in Fargate POD IAM role
