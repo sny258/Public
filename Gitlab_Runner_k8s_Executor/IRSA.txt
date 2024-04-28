@@ -1,0 +1,91 @@
+
+***** IRSA (IAM Roles for Service Account) to access s3 bucket *****
+
+** IAM Roles for Service Account (IRSA) enables applications running in clusters to authenticate with AWS services using IAM roles.
+
+** In simple terms, IRSA allows access to certain AWS service to the containers apart from the IAM role attached to Nodes.
+	
+	Ex: The general node IAM policies are AmazonEKSWorkerNodePolicy, AmazonEC2ContainerRegistryReadOnly, AmazonEKSWorkerNodePolicy and AmazonEKS_CNI_Policy. Now if we run a pod and want to access the s3 buckets then it won't be able to since the node is not having that permission. And if we add the permission to access the s3 bickets to node's IAM role then all the containers running on the node's will have that priviledge.
+	To isolate the access to certain containers, IRSA is used. It provides the access to service account runnung the containers.
+
+
+steps:
+------
+
+1. create an Identity provider from EKS cluster OIDC url.
+	Go to IAM --> Identity providers --> Add provider --> Provider type (OpneID Connect) --> Provider name (eks OIDC URL) --> Add provider
+
+2. Create an IAM policy to allow access to s3 buckets.  (Name: aws-policy-name)
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+				"s3:*"
+            ],
+            "Resource": [
+				"arn:aws:s3:::aws-gitlab-runners-s3/*"
+            ]
+        }
+    ]
+}
+	
+
+3. Creata a new IAM role by using 'web identity'.  (Name: aws-role)
+
+	identity provider: 'OIDC identity provider used in 1st step'
+	Audience: sts.amazonaws.com
+	
+	Policy: aws-policy-name  (created in step 2)
+	
+	
+4. update the trust relationship of the above role created.
+
+	Edit trust realtionship: update the service account to the one used in k8s
+	
+	"StringEquals": {
+          "oidc.eks.eu-central-1.amazonaws.com/id/deadbeefaffe12xxxxxxxaffe1234:sub": "system:serviceaccount:<namespace>:<sa>"
+		  
+		  
+OR 
+
+
+5. It can be done using eksctl command also
+
+eksctl create iamserviceaccount \
+ --name my-sa \
+ --namespace default \
+ --cluster eks-oidc-demo \
+ --role-name "s3-access-role" \
+ --attach-policy-arn <arn of policy created> \
+ #--attach-policy-arn $(aws iam list-policies --query 'Policies[?PolicyName==`AmazonS3ReadOnlyAccess`].Arn' --output text) \
+ --approve \
+ --override-existing-serviceaccounts
+ 
+ 
+6. Verify the role and it's trust policies
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::111122223333:oidc-provider/oidc.eks.us-east-2.amazonaws.com/id/xxxx"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "oidc.eks.us-east-2.amazonaws.com/id/xxxx:aud": "sts.amazonaws.com",
+          "oidc.eks.us-east-2.amazonaws.com/id/xxxx:sub": "system:serviceaccount:default:my-sa"
+        }
+      }
+    }
+  ]
+}
+
+ 
+ 
+ Ref: https://aws.amazon.com/blogs/containers/diving-into-iam-roles-for-service-accounts/
