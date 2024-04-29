@@ -24,7 +24,7 @@ docker run -d -p 8080:80 sanju/demp-app:v1		-- run the app in detach mode (best 
 
 docker run -d -p 8080:80 <image_ID>				-- instead of repo:tag, we can directly use image id also if image is unique
 
-** go to browser 'https://localhost:8080'
+** go to browser 'http://localhost:8080'
 
 docker ps 				-- check the status of running containers
 docker ps -a			-- lists all containers
