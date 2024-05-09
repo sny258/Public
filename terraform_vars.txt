@@ -1,0 +1,364 @@
+#### Terraform Variables ####
+
+
+*** Any ***
+---------------
+
+variable "example_string" {
+  type    = any
+  default = "Hello, World!"
+}
+
+
+*** String ***
+---------------
+
+variable "example_string" {
+  type    = string
+  default = "Hello, World!"
+}
+
+
+*** Number ***
+---------------
+
+variable "example_number" {
+  type    = number
+  default = 42
+}
+
+
+
+*** bool ***
+-------------
+
+variable "example_bool" {
+  type    = bool
+  default = true
+}
+
+##bool is helpful in conditional execution of resource block.
+###like if true then create resource otherwise don't create
+
+resource "aws_eip" "eip_nat" {
+  count = var.create_eip ? 1 : 0
+  vpc = true
+  depends_on = [
+    aws_vpc.vpc
+  ]
+}
+
+###like if value equal to desired then create resource otherwise don't create
+resource "azurerm_virtual_network" "vnet" {
+  count = var.tags == "Prod" ? 1 : 0
+  name                = var.vnet_name
+  address_space       = var.vnet_address_space
+  location            = azurerm_resource_group.vnet_rg.location
+  resource_group_name = azurerm_resource_group.vnet_rg.name
+  tags     = {
+      environment  = var.tags
+    }
+}
+
+
+
+*** List ***
+-------------
+
+variable "example_list" {
+  type    = list(string)
+  default = ["element1", "element2", "element3"]
+}
+
+# Accessing elements of a list variable
+element1 = var.example_list[0]
+element2 = var.example_list[1]
+element3 = var.example_list[2]
+
+#Create subnets using for loop on list
+## For loop can't be applied on list, It has to be changed to set.
+variable "subnet_cidr_blocks" {
+  type    = list(string)
+  default = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+}
+
+resource "aws_subnet" "example" {
+  for_each = toset(var.subnet_cidr_blocks)
+  vpc_id            = aws_vpc.example.id
+  cidr_block        = each.value
+  availability_zone = "us-east-1a"
+}
+
+
+
+*** Tuple ***
+--------------
+
+variable "example_tuple" {
+  type    = tuple([string, number, bool])
+  default = ["element1", 42, true]
+}
+
+# Accessing elements of a list variable
+element1 = var.example_list[0]
+element2 = var.example_list[1]
+element3 = var.example_list[2]
+
+## The only difference between List and Tuple is that Tuple can have different data types.
+
+
+
+*** Maps ***
+------------
+
+## map is a data structure that allows you to store and manage a collection of key-value pairs.
+## All map elements must have the same type.
+## most common use is tags, we can define a map with all tags and then use var.tags to assign tags.
+
+## The following types can be used to define your map:
+
+map(string): The values in the map are of type “string.”
+map(number): The values in the map are of type “number” (integer or floating-point).
+map(bool): The values in the map are of type “bool” (true or false).
+map(list): The values in the map are lists (arrays) containing elements of the same type.
+map(set): The values in the map are sets containing unique elements of the same type.
+map(object({ ... })): The values in the map are objects (complex data structures) that must conform to a specific structure defined by the object’s attributes.
+
+
+variable "eks_cluster_tags" {
+  type    = map(string)
+  default = {
+    Name = "tf-eks-cluster"
+    Environment = "Test"
+    Owner = "Product IT"
+  }
+}
+
+variable "lightsabre_color_map" {
+  type = map(list(string))
+  default = {
+    luke = ["green", "blue"]
+    yoda = ["green"]
+    darth = ["red"]
+  }
+}
+
+## Other use is to define all the value required to create a resource in map instead of creating seperate vars.
+## Below example is map of any i.e. map & map(any) are same and can accept any single type of data type.
+
+variable "nat_details" {
+  type = map
+  default = {
+    create_eip         = true					#this is considered as string "true"
+    eip_allocation_id  = "eipalloc-0abad1ec6864610f9"
+    nat_name           = "terraform-nat"
+    nat_pub_subnet     = "terraform-public-subnet1"
+  }
+}
+
+# Accessing individual values
+nat_create_eip = var.nat_details["create_eip"]
+nat_eip_allocation_id = var.nat_details["eip_allocation_id"]
+nat_name = var.nat_details["nat_name"]
+nat_pub_subnet = var.nat_details["nat_pub_subnet"]
+
+
+## Note: map(any) kind can't accept multiple data types. below example is wrong
+
+variable "eks_cluster_config" {
+  type = map(any)
+  default = {
+    cluster_name                    = "tf-eks-cluster"
+    cluster_version                 = "1.29"
+    cluster_endpoint_private_access = true
+    cluster_endpoint_public_access  = false
+    cluster_public_access_cidrs     = ["a", "b"]
+    cluster_ip_family               = null
+    cluster_service_ipv4_cidr       = null
+  }
+}
+
+
+
+
+*** Simple Object ***
+----------------------
+
+## Object is just like map but it allows us to have different type of data type variable in single object.
+## below example shows how to have different data type vars in object and how to access them.
+
+variable "example_object" {
+  type = object({
+    name  = string
+    count = number
+    required = bool
+    value = list(string)
+    
+  })
+  default = {
+    name  = "example"
+    count = 42
+    required = false
+    value = ["val1", "val2"]
+  }
+}
+
+# Accessing attributes of the object
+object_name  = var.example_object.name
+object_value = var.example_object.value
+
+## Another example for setting default values in object
+
+variable "with_optional_attribute" {
+  type = object({
+    a = string                	# a required attribute
+    b = optional(string)      	# an optional attribute
+    c = optional(number, 127) 	# an optional attribute with default value
+  })
+}
+
+
+
+*** List of Object ***
+-----------------------
+
+variable "list_of_objects" {
+  type = list(object({
+    name  = string
+    value = number
+  }))
+  default = [
+    {
+      name  = "object1"
+      value = 1
+    },
+    {
+      name  = "object2"
+      value = 2
+    }
+  ]
+}
+
+# Accessing attributes of objects in the list
+object1_name  = var.list_of_objects[0].name
+object1_value = var.list_of_objects[0].value
+
+object2_name  = var.list_of_objects[1].name
+object2_value = var.list_of_objects[1].value
+
+
+
+*** Loop through List of Object ***
+------------------------------------
+
+variable "public_subnet_cidr" {
+  type = list(object({
+    cidr    = string
+    name    = string
+    az      = string
+  }))
+  default = [
+    {
+      cidr  = "10.34.0.0/25"
+      name  = "terraform-public-subnet1"
+      az    = "eu-central-1a"
+    },
+    {
+      cidr  = "10.34.0.128/25"
+      name  = "terraform-public-subnet2"
+      az    = "eu-central-1b"
+    }
+  ]
+}
+
+##Creating Public subnet/s
+resource "aws_subnet" "public_subnet" {
+  for_each    = { for public_subnet_cidr in var.public_subnet_cidr : public_subnet_cidr.name => public_subnet_cidr }
+  vpc_id = aws_vpc.vpc.id
+  cidr_block = each.value.cidr
+  availability_zone = each.value.az
+  tags = {
+    Name = each.value.name
+  }
+  depends_on = [
+    aws_vpc.vpc
+  ]
+}
+
+##With loop on list of objects, if condition can also be included to create resources or not.
+
+for_each    = { for vpc_private_endpoints in var.vpc_private_endpoints : vpc_private_endpoints.endpoint_name => vpc_private_endpoints if vpc_private_endpoints.required == true && vpc_private_endpoints.endpoint_type == "Interface" }
+
+
+
+
+
+*** Complex list of object example ***
+---------------------------------------
+
+## Below example show list of object type var where object itself has string, list(string), number, object and map type vars.
+
+variable "eks_node_group" {
+  type = list(object({
+    node_group_name = string
+    instance_types  = list(string)
+    ami_type        = string
+    capacity_type   = string
+    disk_size       = number
+    scaling_config = object({
+      desired_size = number
+      min_size     = number
+      max_size     = number
+    })
+    update_config = object({
+      max_unavailable = number
+    })
+    node_labels     = map(string)
+    node_group_tags = map(string)
+  }))
+  default = [
+    {
+      node_group_name = "tf-eks-nodegroup"
+      instance_types  = ["t3.medium"]
+      ami_type        = "AL2_x86_64"                     #Amazon Linux 2
+      capacity_type   = "ON_DEMAND"
+      disk_size       = 20
+      scaling_config = {
+        desired_size = 1
+        max_size     = 1
+        min_size     = 1
+      }
+      update_config = {
+        max_unavailable = 1
+      }
+      node_labels = {
+        node = "tf-eks-node"
+      }
+      node_group_tags = {}
+    },
+    {}
+]
+
+
+### EKS node group ###
+module "EKS_NODE_GROUP" {
+  source             = "./modules/EKS_NODE_GROUP"
+  for_each           =  { for ng in var.eks_node_group : ng.node_group_name => ng if var.node_group_required == true }
+  cluster_name       = var.eks_cluster_config.cluster_name
+  node_group_name    = each.value.node_group_name
+  node_role_arn      = module.IAM.node_group_role_arn
+  subnet_ids         = var.vpc_required ? (var.nat_details["nat_required"] ? module.NETWORK[0].private_subnet_ids : module.NETWORK[0].public_subnet_ids) : var.subnet_ids
+  instance_types     = each.value.instance_types
+  ami_type           = each.value.ami_type
+  capacity_type      = each.value.capacity_type
+  disk_size          = each.value.disk_size
+  desired_size       = each.value.scaling_config.desired_size
+  max_size           = each.value.scaling_config.max_size
+  min_size           = each.value.scaling_config.min_size
+  max_unavailable    = each.value.update_config.max_unavailable
+  node_labels        = each.value.node_labels
+  node_group_tags    = each.value.node_group_tags
+  depends_on = [
+    module.EKS_CLUSTER
+  ]
+}
