@@ -1,0 +1,21 @@
+
+** How to add an IAM role to IAM user ?
+
+1. Create an IAM role and attach the required policies to it.
+2. Now go to the user and create an inline policy for it and attach the arn of IAM role .
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1"
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "<ARN of the IAM role>"
+        }
+    ]
+}
+
+3. Usefull when a role have multiple policies attached to it to perform some action, and then same role can be required by multiple users. In that case instead of adding those multiple policies to each users manually, A role can be created with those policies and that role can be added to users.
+
+Ref: https://www.youtube.com/watch?v=MkiWa31iV6U
