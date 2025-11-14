@@ -1,0 +1,54 @@
+****** Increase EC2 server volume *******
+
+1. Go to the EC2 instances storage section and then open the volume used there.
+
+2. Modify the volume according to requirement.
+
+3. Now use 'df -h' to check what is the current disk size, It should be the old one.
+
+4. Use 'lsblk' command to check that volume has been modified but partition has not been updated.
+
+5. Use 'growpart /dev/<main disk name> <partition number>' to update the partition also (ex: growpart /dev/xvda 1 or growpart /dev/nvme0n1 1)
+
+6. Again use 'lsblk' to verify that the partition has been updated.
+
+7. verify the file system being used for server using: file -s /dev/xvd*
+
+8. resize the partition (# Check filesystem type: df -Th /)
+	
+	a. If you were using an ext4 (or even older ext2 or ext3) file system  -->  resize2fs /dev/xvda1
+	
+	b. In our case, since the file system is XFS  -->  xfs_growfs -d /
+	
+9. As final step verify using 'df -h' if partition has been resized.
+
+
+Ref: https://medium.com/@mayurbhosale.2014/how-to-modify-the-volume-of-the-ec2-instance-for-linux-and-windows-server-85091ba6f309
+
+
+
+
+****** Attach new volume to EC2 server *******
+
+# Create EBS volume in same AZ as the instance (EC2 > Volumes > Create), then Attach to the instance.
+
+# Identify the new device (e.g., /dev/nvme1n1)
+lsblk
+
+# Make filesystem (XFS recommended on AL2023)
+sudo mkfs.xfs /dev/nvme1n1
+
+# Create mount point and mount
+sudo mkdir -p /data
+sudo mount /dev/nvme1n1 /data
+
+# Persist across reboots (use UUID)
+UUID=$(blkid -s UUID -o value /dev/nvme1n1)
+echo "UUID=$UUID  /data  xfs  defaults,nofail  0  2" | sudo tee -a /etc/fstab
+
+# Verify
+sudo mount -a
+df -h /data
+
+
+Ref: https://medium.com/@mudasirhaji/step-by-step-process-of-how-to-add-and-mount-ebs-volume-on-ubuntu-ec2-linux-instance-a4be8870a4dd
