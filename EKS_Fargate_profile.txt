@@ -1,0 +1,81 @@
+*** EKS Fargate Profile ***
+
+1. Instead of running pods on node groups, we can run the pods on EKS fargate profile.
+2. This way there is no need to manage the nodegroups, AWS will host pods on fargate nodes (serverless).
+3. Fargate cost: https://aws.amazon.com/fargate/pricing/
+
+
+Steps
+------
+
+1. Create an IAM role for fargate profile and update the trust policy.
+   Role: AmazonEKSFargatePodExecutionRole
+   Policies: AmazonEKSFargatePodExecutionRolePolicy, AmazonEC2ContainerRegistryFullAccess
+   Trust Policy:
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "eks-fargate-pods.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "ArnLike": {
+                    "aws:SourceArn": "arn:aws:eks:eu-central-1:123456789:fargateprofile/xxxxxx-eu-central-1-eks-external/*"
+                }
+            }
+        }
+    ]
+}
+
+ref: https://docs.aws.amazon.com/eks/latest/userguide/pod-execution-role.html#create-pod-execution-role
+
+
+2. Now create a Fargate profile in cluster, provide subnets, namespace and pod labels. pod labels are the ones which will schedule the pods on the fargate nodes. 
+
+3. The compute capacity mentioned for the pods in deployment will be the one fargate take as reference for selecting the nodes to schedule and host the pods. 
+
+4. The IAM role should be included in the aws-auth configmap.  
+   ref: https://repost.aws/knowledge-center/fargate-troubleshoot-profile-creation
+
+
+Example:
+---------
+[root@ip-172-31-66-184 bin]# kubectl get configmap aws-auth -n kube-system -o yaml
+apiVersion: v1
+data:
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      - eks:kube-proxy-windows
+      rolearn: arn:aws:iam::123456789:role/xxxxxx-eu-west-1-eks-cluster-nodegroup-role
+      username: system:node:{{EC2PrivateDNSName}}
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      - system:node-proxier
+      rolearn: arn:aws:iam::123456789:role/AmazonEKSFargatePodExecutionRole
+      username: system:node:{{SessionName}}
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-02-12T11:00:09Z"
+  name: aws-auth
+  namespace: kube-system
+  resourceVersion: "152227114"
+  uid: d2ca4fa1-d643-4500-8aed-990970219424
+
+
+
+
+*************
+
+Group Name	 		Permissions
+-----------     		--------------
+system:masters			Full admin access (like a Kubernetes cluster admin)
+system:node			Worker node permissions (used for EKS nodes)
+system:bootstrappers		Allows joining new nodes to the cluster
+Custom groups 			You can define custom groups in Kubernetes RBAC (e.g., eks-admins, eks-devs)

@@ -1,0 +1,25 @@
+# When an ASG instance is terminated it will get re-cretaed, but all the services, cronjobs and other scripts will get hampered due to which.
+
+# Aim is to create an alarm to let us know when an ASG instance is terminated (although it will get recreated automatically)
+
+
+
+CloudWatch Logs metric filter → alarm (short steps)
+----------------------------------------------------
+
+--> Ensure your logs are in a CloudWatch Logs log group and you have an SNS topic.
+    ex: /aws/events/asg-instance-terminate-monitor
+
+--> Create metric filter (Console):
+    CloudWatch > Logs > Log groups > select group > Actions > Create metric filter.
+
+--> Provide Metric name and choose a pattern Pattern:
+    Plain text logs: e.g. 'EC2 Instance Terminate Successful'
+
+--> Assign metric: 
+    Namespace Custom/ASG, Metric name ASGTerminations, Value 1.
+
+--> Create alarm on the metric:
+    CloudWatch > Alarms > Create alarm.
+    Select Custom/ASG → ASGTerminations, Statistic: Sum, Period: 1 minute.
+    Threshold: Greater/Equal 1, Notification: your SNS topic.

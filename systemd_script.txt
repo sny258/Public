@@ -1,0 +1,86 @@
+
+cd /etc/systemd/system
+
+cat /etc/systemd/system/myscript.service
+vi /etc/systemd/system/myscript.service
+
+[Unit]
+Description=Runner manager restart monitor
+After=network.target
+
+[Service]
+User=root
+ExecStart=/bin/python3.8 /root/script.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment="KUBECONFIG=/root/.kube/config"
+Environment="HOME=/root"
+Environment="USER=root"
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo systemctl daemon-reload
+sudo systemctl start myscript
+sudo systemctl restart myscript
+
+sudo systemctl status myscript
+sudo systemctl enable myscript				#Enable Automatic Start on Boot
+sudo systemctl stop myscript
+
+
+sudo systemctl disable myscript.service
+sudo rm /etc/systemd/system/myscript.service
+
+
+
+**** Logs *****
+--> To view the last 100 lines of logs for myscript.service:
+	sudo journalctl -u myscript.service -n 100
+
+--> To follow (-f) logs for myscript.service and view them in real-time:
+	sudo journalctl -fu myscript.service
+
+--> To view logs for myscript.service since yesterday:
+	sudo journalctl -u myscript.service --since yesterday
+
+
+**** cleanup ******
+#https://dev.to/brisbanewebdeveloper/amend-journal-has-been-rotated-since-unit-was-started-on-x1-extreme-gen-2-x1e2-5eme
+
+journalctl --disk-usage
+journalctl --vacuum-time=2weeks
+systemctl restart systemd-journald
+
+
+
+********* for xxxxx ********
+
+vi /etc/systemd/system/runner_manager.service
+
+[Unit]
+Description=Runner manager restart monitor
+After=network.target
+
+[Service]
+User=root
+ExecStart=/bin/python3.8 /root/runner_manager_restart.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment="KUBECONFIG=/root/.kube/config"
+Environment="HOME=/root"
+Environment="USER=root"
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo systemctl daemon-reload
+sudo systemctl start runner_manager
+sudo systemctl status runner_manager
+sudo systemctl enable runner_manager			#Enable Automatic Start on Boot
