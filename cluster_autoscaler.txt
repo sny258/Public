@@ -1,0 +1,169 @@
+## Cluster Autoscaler for AL3
+
+Ref: https://devopscube.com/cluster-autoscaler/ (with pod identity)
+ref: https://www.youtube.com/watch?v=__3O1Tk-26s (with OIDC)
+
+
+
+
+1. create an IAM policy (eks_cluster_auto_scaler_policy)
+---
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeAutoScalingInstances",
+                "autoscaling:DescribeLaunchConfigurations",
+                "autoscaling:DescribeTags",
+                "autoscaling:SetDesiredCapacity",
+                "autoscaling:TerminateInstanceInAutoScalingGroup",
+                "ec2:DescribeLaunchTemplateVersions"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
+---
+OR (not tested)
+---
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeScalingActivities",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeLaunchTemplateVersions",
+        "ec2:GetInstanceTypesFromInstanceRequirements",
+        "eks:DescribeNodegroup"
+      ],
+      "Resource": ["*"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:SetDesiredCapacity",
+        "autoscaling:TerminateInstanceInAutoScalingGroup"
+      ],
+      "Resource": ["*"]
+    }
+  ]
+}
+---
+
+
+2. create an IAM role with web identity(eks_cluster_auto_scaler_role)
+---
+policy:eks_cluster_auto_scaler_policy
+---
+trust relationship
+---
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Principal": {
+				"Federated": "arn:aws:iam::xxxxxx:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/CF13FE3693CF7E7BDAxxxxxxxxxxxx"
+			},
+			"Action": "sts:AssumeRoleWithWebIdentity",
+			"Condition": {
+				"StringEquals": {
+					"oidc.eks.eu-west-1.amazonaws.com/id/CF13FE3693CF7E7Bxxxxxxxx:aud": "sts.amazonaws.com",
+					"oidc.eks.eu-west-1.amazonaws.com/id/CF13FE3693CF7E7BDxxxxxxxxx:sub": "system:serviceaccount:kube-system:cluster-autoscaler"
+				}
+			}
+		}
+	]
+}
+---
+
+
+3. Downlaod the cluster autoscaler yaml config
+---
+wget https://raw.githubusercontent.com/kubernetes/autoscaler/master/cluster-autoscaler/cloudprovider/aws/examples/cluster-autoscaler-autodiscover.yaml
+
+
+4. For the auto-discovery method to work, ASGs must have the following tags.
+---
+  k8s.io/cluster-autoscaler/enabled				: true
+  k8s.io/cluster-autoscaler/<cluster-name>      : owned
+
+
+5. Update the cluster autoscaler SA, to use newly created IAM role
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::xxxxxxxx:role/eks_cluster_auto_scaler_role
+  name: cluster-autoscaler
+  namespace: kube-system
+  
+
+6. update the deployment commands (last line) and image tag
+---
+Change the container image version to the same version as your EKS cluster version.
+---
+- command:
+  - ./cluster-autoscaler
+  - --v=4
+  - --stderrthreshold=info
+  - --cloud-provider=aws
+  - --skip-nodes-with-local-storage=false
+  - --expander=least-waste
+  - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/xxx-xxx-eu-west-1-eks
+  
+  
+6. Deploy the cluster autoscaler
+---
+kubectl apply -f cluster-autoscaler-autodiscover.yaml
+
+
+7. Once the deployment is up, run the following command to annotate the deployment.
+---
+kubectl -n kube-system annotate deployment.apps/cluster-autoscaler cluster-autoscaler.kubernetes.io/safe-to-evict="false"
+
+
+8. Test the autoscaling (make sure NG have max more than desired)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-app
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nginx-app
+  template:
+    metadata:
+      labels:
+        app: nginx-app
+    spec:
+      containers:
+      - name: app
+        image: nginx
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+	
+	
+9. verify	
+---
+kubectl logs -f cluster-autoscaler-59f4f7bf9b-2zg6l -n kube-system
+kubectl get pods
+kubectl get nodes
+
