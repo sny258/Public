@@ -9,22 +9,98 @@
 
 *** steps ***
 
-1. Create an IAM role with required policies to manage permission sets and attach it to EC2 instance.
+1. Create the IAM role with required permissions and then attach the same role to ec2 server. no trust policy change required.
 
-2. After that in trust policies, add the ARN of the same role in principles. this is for assume role of server to allow access to actual IAM role.
+2. then while executing the job, just make sure to unset all previous aws env creds.
+-----
+image:
+  name: hashicorp/terraform:latest
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::407893465771:role/SSO_gitlab_runner_role",
-                "Service": "ec2.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-        }
-    ]
-}
+default:
+  tags:
+    - TF      #global tag so that Production account runner picks the jobs
 
-3. Now if terraform code is ran on the same EC2 instance without AWS configure or setting up aws env variables for auth, terraform will use the above IAM role.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'    #for manual from UI
+      when: always
+    # - changes:
+    #     - '**/*.tf'                         #'ps_tf/*.tf'
+    #   when: always                          #Run the pipeline whenever changes to .tf files occur
+    - when: never
+
+
+stages:
+  #- checkov_scan
+  - terraform_validate_plan
+  - terraform_apply
+  #- terraform_destroy
+
+
+# variables:
+#   TF_IN_AUTOMATION: "true"
+#   TF_INPUT: "false"
+#   TF_CLI_ARGS: "-no-color"
+#   AWS_EC2_METADATA_SERVICE_ENDPOINT: "http://169.254.169.254"
+#   AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE: "IPv4"
+
+variables:
+  tf_dir: "$CI_PROJECT_DIR/tf_dir"
+
+
+terraform_validate:
+  stage: terraform_validate_plan
+  script:
+    - cd "$tf_dir"
+    - terraform init
+    - terraform validate
+  artifacts:
+    paths:
+      - "$CI_PROJECT_DIR"
+
+terraform_plan:
+  stage: terraform_validate_plan
+  variables:
+    GIT_STRATEGY: none          #Repo won't be cloned
+  script:
+    - cd "$tf_dir"
+    - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_PROFILE AWS_SHARED_CREDENTIALS_FILE AWS_CONFIG_FILE
+    - terraform plan -out="tf_plan_file"
+  artifacts:
+    paths:
+      #- "$tf_dir/tf_plan_file"
+      - "$CI_PROJECT_DIR"
+  needs:
+    - job: terraform_validate
+      #artifacts: true          #by default artifact is downloaded for needs job
+
+terraform_apply:
+  stage: terraform_apply
+  variables:
+    GIT_STRATEGY: none          #Repo won't be cloned
+  script:
+    - cd "$tf_dir"
+    - terraform apply -input=false "tf_plan_file"
+  artifacts:
+    paths:
+      - "$CI_PROJECT_DIR"
+  needs:
+    - job: terraform_plan
+    #- job: terraform_validate
+  when: manual
+
+
+# terraform_destroy:
+#   stage: terraform_destroy
+#   variables:
+#     GIT_STRATEGY: none               #to not clone git repo for evry stage/job 
+#   script:
+#     - cd "$tf_dir"
+#     - terraform destroy -auto-approve
+#   when: manual
+#   needs:
+#     - job: terraform_apply
+#       artifacts: true

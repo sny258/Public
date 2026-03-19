@@ -1,0 +1,50 @@
+## Configure EC2 GitLab Runner to Pull Images from ECR
+
+
+1. Give the EC2 instance access to ECR repositories
+
+2. Install ECR credentials helper
+---
+sudo yum install -y amazon-ecr-credential-helper awscli
+
+3. Update Docker config to use ECR login helper
+---
+sudo mkdir -p /root/.docker
+sudo tee /root/.docker/config.json > /dev/null <<'EOF'
+{
+  "credHelpers": {
+    "94758xxxxx.dkr.ecr.eu-central-1.amazonaws.com": "ecr-login"
+  }
+}
+EOF
+sudo chmod 700 /root/.docker
+sudo chmod 600 /root/.docker/config.json
+
+4. Register the runner and update the config
+---
+gitlab-runner register \
+  --non-interactive \
+  --url "https://aaaaaa.xxxxxxx.net" \
+  --token "REDACTED" \
+  --executor docker \
+  --docker-image alpine:latest \
+  --docker-privileged \
+  --docker-volumes /var/run/docker.sock:/var/run/docker.sock
+
+---
+[[runners]]
+  name = "ec2-docker-runner"
+  url = "https://aaaaa.xxxxx.net"
+  token = "REDACTED"
+  executor = "docker"
+  environment = ["DOCKER_AUTH_CONFIG={\"credHelpers\":{\"94758xxxxxxx.dkr.ecr.eu-central-1.amazonaws.com\":\"ecr-login\"}}"]
+
+  [runners.docker]
+    tls_verify = false
+    image = "alpine:latest"
+    privileged = true
+    disable_entrypoint_overwrite = false
+    oom_kill_disable = false
+    disable_cache = false
+    pull_policy = "if-not-present"
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
